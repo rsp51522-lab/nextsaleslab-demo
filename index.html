@@ -892,10 +892,9 @@
   </section>
 </div>
 
-<form id="mailSendForm" class="hidden" method="post" target="mailSendFrame">
+<form id="mailSendForm" class="hidden" method="post" target="mailSendPopup">
   <input type="hidden" name="payload" id="mailPayloadInput">
 </form>
-<iframe name="mailSendFrame" id="mailSendFrame" class="hidden"></iframe>
 
 <button type="button" class="home-fab hidden" id="homeFab" aria-label="ホームへ戻る" onclick="goToolboxHome()">
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -907,9 +906,12 @@
 
 <script>
   var MAIL_API_STORAGE_KEY = "nslMailApiUrl";
-  var DEFAULT_MAIL_API_URL = "https://script.google.com/macros/s/AKfycby1_XLhpxeY8wbnbwZiNSZYCVCHPwxqRvZ3GLbAzTZVouCPvks7e9rAwQ4cKcKr_Mwy/exec";
+  var DEFAULT_MAIL_API_URL = "https://script.google.com/macros/s/AKfycbx9T7ktTqkXVU6KFaaZ0VyseXx-_b72ttPUF8Hrbkq2NH8cCxStvRoGSex6oa5i5pFF/exec";
+  // This retired endpoint cannot return the send result to the estimate page.
+  var RETIRED_MAIL_API_URL_PART = "AKfycby1_XLhpxeY8wbnbwZiNSZYC";
   var pendingMailTarget = "";
   var pendingMailTimer = 0;
+  var mailSendPopup = null;
   var PRODUCTS = [
     { code: "NSL001", name: "領収書LINE Bot", unit: "1ID", priceEx: 8000 },
     { code: "NSL002", name: "LINE名刺管理Bot", unit: "1ID", priceEx: 8000 },
@@ -943,7 +945,7 @@
     { code: "NSL030", name: "注文・見積・領収書自動作成", unit: "1件", priceEx: 30000 }
   ];
   var TAX_RATE = 0.1;
-  var TOOLBOX_HOME_BASE = "https://business-card-line-app-nsl.vercel.app/?token=c529b0fb4d7369b6d9455ad77e5a90ca03cc5c4e9dd22c38866e9bf3eceb524a";
+  var TOOLBOX_HOME_BASE = "https://business-card-line-app-nsl.vercel.app/?token=388599201de594a2ca83cfcb5fde91845aed51deff63c4790a00a664de03b5ee";
   var customProducts = [];
   var FLOW_STEPS = [
     ["フォーム回答シートへ追加", "お客様情報と希望サービスを自動記録します"],
@@ -1004,16 +1006,19 @@
 
   function loadMailApiUrl() {
     var params = new URLSearchParams(window.location.search);
-    var apiUrl = (params.get("mailApi") || params.get("api") || "").trim();
-    if (!apiUrl && typeof window !== "undefined" && window.localStorage) {
-      apiUrl = window.localStorage.getItem(MAIL_API_STORAGE_KEY) || "";
-    }
-    if (!apiUrl) {
-      apiUrl = DEFAULT_MAIL_API_URL;
+    var requestedApiUrl = (params.get("mailApi") || params.get("api") || "").trim();
+    // The estimate app has one production gateway. Always replace stale browser data.
+    var apiUrl = requestedApiUrl || DEFAULT_MAIL_API_URL;
+    var migrated = !requestedApiUrl && typeof window !== "undefined" && window.localStorage &&
+      window.localStorage.getItem(MAIL_API_STORAGE_KEY) !== DEFAULT_MAIL_API_URL;
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem(MAIL_API_STORAGE_KEY, apiUrl);
     }
     var input = document.getElementById("mailApiUrl");
     if (input) input.value = apiUrl;
-    if (apiUrl) {
+    if (migrated) {
+      setMailApiStatus("保存されていた送信口URLを新しい送信口へ更新しました。実送信の準備ができています。", "ready");
+    } else if (apiUrl) {
       setMailApiStatus("送信口URLを読み込みました。実送信の準備ができています。", "ready");
     } else {
       setMailApiStatus("送信口URLがまだ入っていません。今は送信確認画面として表示しています。", "warn");
@@ -1098,12 +1103,20 @@
     }
   }
 
+  function closeMailSendPopup() {
+    if (mailSendPopup && !mailSendPopup.closed) {
+      try { mailSendPopup.close(); } catch (e) {}
+    }
+    mailSendPopup = null;
+  }
+
   function handleMailGatewayMessage(event) {
     var data = event.data;
     if (!data || data.source !== "nsl-mail-gateway") return;
 
     clearPendingMailTimer();
     setSendButtonsDisabled(false);
+    closeMailSendPopup();
 
     if (!pendingMailTarget) return;
     if (!data.ok) {
@@ -1530,13 +1543,25 @@
     pendingMailTimer = setTimeout(function() {
       pendingMailTarget = "";
       setSendButtonsDisabled(false);
+      closeMailSendPopup();
       setMailApiStatus("返事が返らないため、送信結果を確認できませんでした。Google側の設定をご確認ください。", "error");
       alert("送信結果を確認できませんでした。Google Apps Script の公開設定をご確認ください。");
     }, 25000);
 
     var form = document.getElementById("mailSendForm");
     var payloadInput = document.getElementById("mailPayloadInput");
+    closeMailSendPopup();
+    mailSendPopup = window.open("about:blank", "mailSendPopup", "width=540,height=680");
+    if (!mailSendPopup) {
+      pendingMailTarget = "";
+      clearPendingMailTimer();
+      setSendButtonsDisabled(false);
+      setMailApiStatus("送信用の小さい画面を開けませんでした。ブラウザのポップアップ許可をご確認ください。", "error");
+      alert("送信用の小さい画面を開けませんでした。Chrome右上のポップアップ許可をご確認ください。");
+      return;
+    }
     form.action = apiUrl;
+    form.target = "mailSendPopup";
     payloadInput.value = JSON.stringify(buildMailRequest(target));
     form.submit();
   }
