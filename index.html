@@ -1164,12 +1164,15 @@
     tbody.innerHTML = PRODUCTS.map(function(p, i) {
       var options = "";
       for (var q = 0; q <= 10; q++) options += '<option value="' + q + '">' + q + "</option>";
+      var qtyField = p.code === "NSL024" || p.code === "NSL025"
+        ? '<input type="number" id="qty' + i + '" value="0" min="0" step="1" inputmode="numeric" oninput="updateTotal()">'
+        : '<select id="qty' + i + '" onchange="updateTotal()">' + options + "</select>";
       return "<tr>" +
         "<td>" + p.name + "</td>" +
         '<td class="unit-col">' + formatUnit(p.unit) + "</td>" +
         '<td class="num">' + p.workHours + "</td>" +
         '<td class="num">' + yen(p.priceEx) + "</td>" +
-        '<td class="num"><select id="qty' + i + '" onchange="updateTotal()">' + options + "</select></td>" +
+        '<td class="num">' + qtyField + "</td>" +
         "</tr>";
     }).join("");
   }
@@ -1222,7 +1225,7 @@
   function collectItems() {
     var items = [];
     PRODUCTS.forEach(function(p, i) {
-      var qty = Number(document.getElementById("qty" + i).value);
+      var qty = Math.max(0, Math.floor(Number(document.getElementById("qty" + i).value) || 0));
       if (qty > 0) {
         var unitEx = p.priceEx;
         var tax = calcTax(unitEx * qty);
