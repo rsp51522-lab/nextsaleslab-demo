@@ -306,7 +306,7 @@
   .btn.sub:hover { background: var(--main-light); }
   .btn-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     margin-top: 16px;
   }
@@ -805,6 +805,7 @@
 
       <div class="btn-row">
         <button class="btn sub" type="button" onclick="showScreen(1)">戻る</button>
+        <button class="btn sub" type="button" onclick="openPerformanceApp()">実績管理へ登録画面を開く</button>
         <button class="btn" type="button" onclick="showScreen(4)">送信内容と管理記録を見る</button>
       </div>
     </div>
@@ -941,6 +942,7 @@
   ];
   var TAX_RATE = 0.1;
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
+  var PERFORMANCE_APP_URL = "https://nsl-performance-app.nextsaleslab.chatgpt.site/";
   var customProducts = [];
   var FLOW_STEPS = [
     ["フォーム回答シートへ追加", "お客様情報と希望サービスを自動記録します"],
@@ -981,6 +983,56 @@
 
   function calcTax(amountEx) {
     return Math.round(amountEx * TAX_RATE);
+  }
+
+  function encodeBase64UrlJson(value) {
+    var json = JSON.stringify(value);
+    var bytes = new TextEncoder().encode(json);
+    var binary = "";
+    bytes.forEach(function(byte) {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function buildPerformanceAppUrl() {
+    if (!state || !state.items || !state.items.length) return PERFORMANCE_APP_URL;
+    var payload = {
+      company: state.company || "",
+      representative: state.name || "",
+      appointmentDate: todayStr("-"),
+      sales: "浅野",
+      items: state.items.map(function(item) {
+        return {
+          name: item.name,
+          unit: item.unit,
+          quantity: item.qty,
+          priceEx: item.unitEx,
+          amountEx: item.subtotalEx
+        };
+      })
+    };
+    var params = new URLSearchParams();
+    params.set("tab", "cases");
+    params.set("action", "new");
+    params.set("source", "estimate");
+    if (payload.company) params.set("company", payload.company);
+    if (payload.representative) params.set("representative", payload.representative);
+    params.set("appointmentDate", payload.appointmentDate);
+    params.set("sales", payload.sales);
+    params.set("quote", encodeBase64UrlJson(payload));
+    return PERFORMANCE_APP_URL + "?" + params.toString();
+  }
+
+  function openPerformanceApp() {
+    if (!state || !state.items || !state.items.length) {
+      alert("先に見積書を作成してください。");
+      return;
+    }
+    var opened = window.open(buildPerformanceAppUrl(), "_blank", "noopener");
+    if (!opened) {
+      alert("実績管理画面を開けませんでした。ブラウザのポップアップ許可を確認してください。");
+    }
   }
 
   function formatUnit(unit) {
@@ -1386,6 +1438,7 @@
     state.addressee = state.company ? state.company + " 御中" : state.name + " 様";
     state.fileName = (state.company ? state.company + "御中" : state.name + "様") + "_御見積書_" + state.orderNo + ".pdf";
 
+    openPerformanceApp();
     showScreen(2);
     runFlow();
   }
