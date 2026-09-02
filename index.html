@@ -694,7 +694,7 @@
         <label>ご希望サービス（数量を選択）<span class="req">1点以上</span></label>
         <table class="products">
           <thead>
-            <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業時間（1時間）</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
+            <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業日数</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
           </thead>
           <tbody id="productRows"></tbody>
         </table>
@@ -914,31 +914,29 @@
   var pendingMailTimer = 0;
   var mailSendPopup = null;
   var PRODUCTS = [
-    { code: "NSL001", name: "領収書LINE Bot", unit: "1ID", workHours: 2, priceEx: 8000 },
-    { code: "NSL002", name: "LINE名刺管理Bot", unit: "1ID", workHours: 2, priceEx: 8000 },
-    { code: "NSL003", name: "LINE/領収書", unit: "1セット", workHours: 3.75, priceEx: 15000 },
-    { code: "NSL004", name: "公式LINE制作", unit: "1ID", workHours: 5, priceEx: 20000 },
-    { code: "NSL005", name: "公式LINE一式", unit: "1件", workHours: 25, priceEx: 100000 },
-    { code: "NSL006", name: "シフト表自動化", unit: "1件", workHours: 5, priceEx: 20000 },
-    { code: "NSL007", name: "予約システム", unit: "1件", workHours: 6, priceEx: 24000 },
-    { code: "NSL008", name: "リッチメニュー", unit: "1件", workHours: 3, priceEx: 12000 },
-    { code: "NSL009", name: "勤怠管理簡易", unit: "1件", workHours: 3, priceEx: 12000 },
-    { code: "NSL010", name: "勤怠管理", unit: "1件", workHours: 6, priceEx: 24000 },
-    { code: "NSL011", name: "勤怠管理フル", unit: "1件", workHours: 9, priceEx: 36000 },
-    { code: "NSL012", name: "Googleフォーム制作", unit: "1件", workHours: 2.5, priceEx: 10000 },
-    { code: "NSL013", name: "Googleスプレッド制作", unit: "1件", workHours: 2.5, priceEx: 10000 },
-    { code: "NSL014", name: "注文・見積・領収書自動作成", unit: "1件", workHours: 7.5, priceEx: 30000 },
-    { code: "NSL015", name: "エクセルの自動化", unit: "1件", workHours: 7.5, priceEx: 30000 },
-    { code: "NSL016", name: "業務効率化", unit: "1件", workHours: 12.5, priceEx: 50000 },
-    { code: "NSL017", name: "建築業務自動化", unit: "1件", workHours: 12.5, priceEx: 50000 },
-    { code: "NSL018", name: "建築システム作成", unit: "1件", workHours: 25, priceEx: 100000 },
-    { code: "NSL019", name: "リンク設定", unit: "1件", workHours: 2.5, priceEx: 10000 },
-    { code: "NSL020", name: "オーダ管理", unit: "1件", workHours: 15, priceEx: 60000 },
-    { code: "NSL021", name: "議事録", unit: "1件", workHours: 3, priceEx: 12000 },
-    { code: "NSL022", name: "AIチャットPod", unit: "1件", workHours: 12.5, priceEx: 50000 },
-    { code: "NSL023", name: "AIチャット管理Pod", unit: "1件", workHours: 25, priceEx: 100000 },
-    { code: "NSL024", name: "名刺読込", unit: "1枚", workHours: 10, priceEx: 20 },
-    { code: "NSL025", name: "画像取込", unit: "1枚", workHours: 10, priceEx: 20 }
+    { code: "NSL001", name: "領収書管理bot", unit: "ID", workHours: 1, priceEx: 0 },
+    { code: "NSL002", name: "名刺管理システム", unit: "ID", workHours: 1, priceEx: 0 },
+    { code: "NSL003", name: "名刺・領収書読込", unit: "枚", workHours: 1, priceEx: 20 },
+    { code: "NSL004", name: "議事録自動化", unit: "ID", workHours: 1, priceEx: 10000 },
+    { code: "NSL005", name: "Googleフォーム制作", unit: "件", workHours: 1, priceEx: 10000 },
+    { code: "NSL006", name: "Googleスプレッドシート制作", unit: "件", workHours: 1, priceEx: 10000 },
+    { code: "NSL007", name: "一般勤怠管理システム", unit: "件", workHours: 1, priceEx: 20000 },
+    { code: "NSL008", name: "特殊勤怠管理システム", unit: "件", workHours: 2, priceEx: 40000 },
+    { code: "NSL009", name: "見積自動作成（マクロ）", unit: "件", workHours: 2, priceEx: 30000 },
+    { code: "NSL010", name: "見積自動作成システム（一般）", unit: "件", workHours: 5, priceEx: 50000 },
+    { code: "NSL011", name: "見積自動作成システム（建築）", unit: "件", workHours: 5, priceEx: 100000 },
+    { code: "NSL012", name: "図面読込自動システム", unit: "件", workHours: 2, priceEx: 30000 },
+    { code: "NSL013", name: "AI機能", unit: "件", workHours: 3, priceEx: 50000 },
+    { code: "NSL014", name: "AI機能（オーダー）", unit: "件", workHours: 7, priceEx: 100000 },
+    { code: "NSL015", name: "AI機能（特殊）", unit: "件", workHours: 7, priceEx: 200000 },
+    { code: "NSL016", name: "建築関連システム", unit: "件", workHours: 7, priceEx: 100000 },
+    { code: "NSL017", name: "AIチャットPod", unit: "件", workHours: 7, priceEx: 100000 },
+    { code: "NSL018", name: "単価マスター", unit: "件", workHours: 3, priceEx: 25000 },
+    { code: "NSL019", name: "単価マスター（建築）", unit: "件", workHours: 5, priceEx: 50000 },
+    { code: "NSL020", name: "システム初期設定", unit: "件", workHours: 1, priceEx: 20000 },
+    { code: "NSL021", name: "データ管理小規模（月額）", unit: "ID", workHours: 1, priceEx: 5000 },
+    { code: "NSL022", name: "データ管理中規模（月額）", unit: "ID", workHours: 1, priceEx: 10000 },
+    { code: "NSL023", name: "データ管理大規模（月額）", unit: "ID", workHours: 1, priceEx: 25000 }
   ];
   var TAX_RATE = 0.1;
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
@@ -1262,7 +1260,7 @@
     tbody.innerHTML = PRODUCTS.map(function(p, i) {
       var options = "";
       for (var q = 0; q <= 10; q++) options += '<option value="' + q + '">' + q + "</option>";
-      var qtyField = p.code === "NSL024" || p.code === "NSL025"
+      var qtyField = p.unit === "枚"
         ? '<input type="number" id="qty' + i + '" value="0" min="0" step="1" inputmode="numeric" oninput="updateTotal()">'
         : '<select id="qty' + i + '" onchange="updateTotal()">' + options + "</select>";
       return "<tr>" +
