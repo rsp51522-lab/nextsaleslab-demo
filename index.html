@@ -602,6 +602,58 @@
     padding: 5px 12px;
     margin-bottom: 10px;
   }
+  .storage-panel {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    border-radius: 10px;
+    padding: 14px;
+    margin: 14px 0;
+  }
+  .storage-panel h3 { font-size: 14px; color: var(--main-dark); margin-bottom: 6px; }
+  .storage-panel p { font-size: 12px; color: #475569; margin-bottom: 10px; }
+  .storage-status { margin-top: 8px; font-size: 12px; font-weight: bold; color: #1d4ed8; }
+  .contract {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    padding: 36px 40px;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 12px;
+    line-height: 1.75;
+    color: #111827;
+  }
+  .contract-title { text-align: center; font-size: 21px; font-weight: bold; margin-bottom: 22px; }
+  .contract h3 { font-size: 13px; margin: 14px 0 3px; }
+  .contract p { margin: 0 0 7px; }
+  .contract-signatures { margin: 22px 0; }
+  .contract-signatures p { margin: 5px 0; }
+  .contract-appendix { break-before: page; page-break-before: always; margin-top: 26px; }
+  .contract-appendix h2 { text-align: center; font-size: 18px; border: 0; padding: 0; margin-bottom: 16px; }
+  .contract table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; }
+  .contract th, .contract td { border: 1px solid #94a3b8; padding: 7px 8px; vertical-align: top; }
+  .contract th { width: 29%; background: #eaf4fb; text-align: left; }
+  .contract .amount-table th { width: auto; text-align: center; }
+  .contract .amount-table td:nth-child(2) { text-align: right; white-space: nowrap; }
+  .contract-note { font-size: 11px; }
+  .document-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .document-actions .btn { width: auto; flex: 1 1 190px; }
+  .contract-import-page { min-height: 100vh; background: #eaf4fb; padding: 24px 14px 70px; }
+  .contract-import-wrap { max-width: 900px; margin: 0 auto; }
+  .contract-import-head { background: linear-gradient(135deg, var(--main-dark), var(--main)); color: #fff; padding: 22px 24px; border-radius: 14px 14px 0 0; }
+  .contract-import-head h1 { font-size: 22px; }
+  .contract-import-head p { margin-top: 5px; font-size: 14px; opacity: .92; }
+  .upload-card { background: #fff; border: 1px solid #bfdbfe; border-radius: 0 0 14px 14px; padding: 24px; box-shadow: 0 8px 24px rgba(8,61,89,.1); }
+  .pdf-drop { display: block; border: 2px dashed #3b82f6; border-radius: 12px; padding: 28px 18px; text-align: center; background: #eff6ff; cursor: pointer; }
+  .pdf-drop strong { display: block; color: #1d4ed8; font-size: 18px; margin-bottom: 5px; }
+  .pdf-drop input { margin-top: 14px; max-width: 100%; }
+  .import-status { margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: #f1f5f9; font-size: 13px; color: #334155; }
+  .import-status.busy { background: #fef3c7; color: #92400e; }
+  .import-status.done { background: #dcfce7; color: #166534; }
+  .import-status.error { background: #fee2e2; color: #b91c1c; }
+  .import-result { margin-top: 18px; }
+  .import-summary { background: #ecfdf5; border: 1px solid #86efac; border-radius: 9px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
+  @media print {
+    .contract { border: 0; padding: 10mm 12mm; }
+  }
   @media (max-width: 640px) {
     .header-inner { flex-direction: column; gap: 10px; }
     .header-logo { flex-basis: auto; justify-content: center; }
@@ -614,6 +666,7 @@
     .discount-input { width: 100%; justify-content: space-between; }
     .discount-input input { width: 120px; }
     .mail-gateway-row { grid-template-columns: 1fr; }
+    .contract { padding: 22px 16px; font-size: 11px; }
     .home-fab {
       width: 72px;
       height: 72px;
@@ -626,6 +679,9 @@
     }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -650,7 +706,8 @@
     <div class="step active" id="stepTab1"><span class="num">1</span>注文フォーム</div>
     <div class="step" id="stepTab2"><span class="num">2</span>自動処理</div>
     <div class="step" id="stepTab3"><span class="num">3</span>見積書PDF</div>
-    <div class="step" id="stepTab4"><span class="num">4</span>メール・管理表</div>
+    <div class="step" id="stepTab4"><span class="num">4</span>契約書</div>
+    <div class="step" id="stepTab5"><span class="num">5</span>メール・管理表</div>
   </div>
 
   <section id="screen1">
@@ -674,6 +731,11 @@
       <div class="field">
         <label>ご担当者名<span class="req">必須</span></label>
         <input type="text" id="name" placeholder="例）浅野 隆史">
+      </div>
+
+      <div class="field">
+        <label>所在地（契約書へ自動入力）</label>
+        <input type="text" id="address" placeholder="例）栃木県小山市〇〇1-2-3">
       </div>
 
       <div class="field">
@@ -762,12 +824,19 @@
       <h2>御見積書PDFが自動作成されました</h2>
 
       <div class="filename-chip">
-        <span>📄</span><span>Googleドライブに保存：<b id="pdfFileName"></b></span>
+        <span>📄</span><span>作成ファイル：<b id="pdfFileName"></b></span>
         <a onclick="openPdfDemo()">PDFを開く</a>
       </div>
 
+      <div class="storage-panel">
+        <h3>MacのNSLフォルダーへ保管</h3>
+        <p>初回だけ「保存先を設定」で <b>/Users/asano/Desktop/実績報告/NSL</b> を選んでください。見積書・契約書の各フォルダーへ振り分けます。</p>
+        <button class="mini-button" type="button" onclick="chooseNslFolder()">保存先を設定</button>
+        <div class="storage-status" id="storageStatus">保存先はまだ設定されていません。</div>
+      </div>
+
       <p class="edit-hint">✏️ 見積書は直接クリックして自由に書き換えできます（宛名・件名・明細・金額など）</p>
-      <div class="estimate" contenteditable="true" spellcheck="false">
+      <div class="estimate" id="estimateDocument" contenteditable="true" spellcheck="false">
         <div class="doc-title">御見積書</div>
         <div class="est-head">
           <div>
@@ -806,12 +875,32 @@
       <div class="btn-row">
         <button class="btn sub" type="button" onclick="showScreen(1)">戻る</button>
         <button class="btn sub" type="button" onclick="openPerformanceApp()">実績管理へ登録画面を開く</button>
-        <button class="btn" type="button" onclick="showScreen(4)">送信内容と管理記録を見る</button>
+        <button class="btn sub" type="button" onclick="saveDocumentPdf('estimate')">見積PDFを保管</button>
+        <button class="btn sub" type="button" onclick="prepareDocumentMail('estimate')">見積書をメール送信</button>
+        <button class="btn" type="button" onclick="createContract()">契約書を自動作成</button>
       </div>
     </div>
   </section>
 
   <section id="screen4" class="hidden">
+    <div class="card">
+      <h2>契約書が見積内容から自動作成されました</h2>
+      <div class="filename-chip">
+        <span>📄</span><span>作成ファイル：<b id="contractFileName"></b></span>
+        <a onclick="openPdfDemo('contract')">PDFを開く</a>
+      </div>
+      <p class="edit-hint">✏️ 契約書は直接クリックして、所在地・アプリ名・機能・料金などを修正できます</p>
+      <div id="contractDocument" class="contract" contenteditable="true" spellcheck="false"></div>
+      <div class="storage-status" id="contractStorageStatus">契約PDFは未保管です。</div>
+      <div class="document-actions">
+        <button class="btn sub" type="button" onclick="showScreen(3)">見積書へ戻る</button>
+        <button class="btn sub" type="button" onclick="saveDocumentPdf('contract')">契約PDFを保管</button>
+        <button class="btn" type="button" onclick="prepareDocumentMail('contract')">契約書をメール送信</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen5" class="hidden">
     <div class="card">
       <p class="edit-hint">✏️ メールの件名・本文もクリックして書き換えできます</p>
       <div class="mail-gateway">
@@ -886,7 +975,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn sub" type="button" onclick="showScreen(3)">戻る</button>
+        <button class="btn sub" type="button" onclick="showScreen(state.mailMode === 'contract' ? 4 : 3)">戻る</button>
         <button class="btn sub" type="button" onclick="resetDemo()">新しい見積を作る</button>
       </div>
     </div>
@@ -949,6 +1038,9 @@
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
   var PERFORMANCE_APP_URL = "https://nsl-performance-app.nextsaleslab.chatgpt.site/";
   var customProducts = [];
+  var nslBaseDirectoryHandle = null;
+  var DIRECTORY_DB_NAME = "nsl-document-storage";
+  var DIRECTORY_STORE_NAME = "handles";
   var FLOW_STEPS = [
     ["フォーム回答シートへ追加", "お客様情報と希望サービスを自動記録します"],
     ["注文番号を発行", "例: NSL-20260725-001 の形で自動採番します"],
@@ -988,6 +1080,22 @@
 
   function calcTax(amountEx) {
     return Math.round(amountEx * TAX_RATE);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function safeFileName(value) {
+    return String(value || "document.pdf").replace(/[\\/:*?"<>|]/g, "_");
+  }
+
+  function japaneseDate() {
+    return new Intl.DateTimeFormat("ja-JP-u-ca-japanese", {
+      era: "long", year: "numeric", month: "long", day: "numeric"
+    }).format(new Date());
   }
 
   function encodeBase64UrlJson(value) {
@@ -1082,6 +1190,11 @@
     return params.get("mode") === "toolbox";
   }
 
+  function isContractMode() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get("mode") === "contract";
+  }
+
   function renderToolboxMode() {
     document.title = "名刺ポケット";
     document.body.innerHTML =
@@ -1093,6 +1206,7 @@
           '<div class="toolbox-grid">' +
             '<a class="toolbox-card" href="https://business-card-line-app-nsl.vercel.app/cards?token=388599201de594a2ca83cfcb5fde91845aed51deff63c4790a00a664de03b5ee"><span>名刺管理</span><strong>→</strong></a>' +
             '<a class="toolbox-card" href="https://rsp51522-lab.github.io/nextsaleslab-demo/"><span>見積書</span><strong>→</strong></a>' +
+            '<a class="toolbox-card" href="https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=contract"><span>契約書作成</span><strong>→</strong></a>' +
             '<a class="toolbox-card" href="https://receipt-manager-line.vercel.app/?token=68d686070a11c103ffe2a378b8bf79cbea536bbee2e0b8a46d7f848a2cfa755a"><span>領収書アプリ</span><strong>→</strong></a>' +
             '<div class="toolbox-card toolbox-card-muted"><span>請求書</span><em>準備中</em></div>' +
             '<a class="toolbox-card" href="https://calendar.worksmobile.com/web/calendar/main?viewType=week"><span>スケジュール</span><strong>→</strong></a>' +
@@ -1123,6 +1237,152 @@
     document.head.appendChild(style);
   }
 
+  function renderContractImportMode() {
+    document.title = "NSL相談所 見積PDFから契約書作成";
+    document.body.innerHTML =
+      '<main class="contract-import-page"><div class="contract-import-wrap">' +
+        '<header class="contract-import-head"><h1>見積PDFから契約書を自動作成</h1>' +
+        '<p>契約書をまだ作成していない案件の見積書を取り込みます。</p></header>' +
+        '<section class="upload-card">' +
+          '<a class="top-home-btn" href="' + TOOLBOX_HOME_BASE + '" style="display:inline-block;text-decoration:none;margin-bottom:16px;">業務メニューへ戻る</a>' +
+          '<label class="pdf-drop"><strong>見積書PDFを選択</strong><span>顧客名・見積番号・明細・金額を読み取ります</span>' +
+          '<input type="file" id="estimatePdfInput" accept="application/pdf,.pdf" onchange="importEstimatePdf(this.files[0])"></label>' +
+          '<div class="import-status" id="importStatus">PDFを選択してください。画像PDFの場合はOCRで読み取るため少し時間がかかります。</div>' +
+          '<div class="import-result hidden" id="importResult">' +
+            '<div class="import-summary" id="importSummary"></div>' +
+            '<p class="edit-hint">✏️ 読み取り結果は契約書内を直接クリックして修正できます</p>' +
+            '<div id="contractDocument" class="contract" contenteditable="true" spellcheck="false"></div>' +
+            '<div class="storage-panel"><h3>契約書PDFの保管</h3>' +
+            '<p>初回だけ「保存先を設定」で /Users/asano/Desktop/実績報告/NSL を選択してください。</p>' +
+            '<button class="mini-button" type="button" onclick="chooseNslFolder()">保存先を設定</button>' +
+            '<div class="storage-status" id="storageStatus">保存先はまだ設定されていません。</div></div>' +
+            '<div class="document-actions"><button class="btn sub" type="button" onclick="openPdfDemo(\'contract\')">契約書PDFを確認</button>' +
+            '<button class="btn" type="button" onclick="saveDocumentPdf(\'contract\')">契約PDFを保管</button></div>' +
+          '</div>' +
+        '</section>' +
+      '</div></main>';
+  }
+
+  function setImportStatus(message, kind) {
+    var el = document.getElementById("importStatus");
+    if (!el) return;
+    el.textContent = message;
+    el.className = "import-status" + (kind ? " " + kind : "");
+  }
+
+  function pdfItemsToLines(items) {
+    var rows = [];
+    items.forEach(function(item) {
+      var y = Math.round((item.transform && item.transform[5]) || 0);
+      var x = (item.transform && item.transform[4]) || 0;
+      var row = rows.find(function(candidate) { return Math.abs(candidate.y - y) <= 2; });
+      if (!row) { row = { y: y, cells: [] }; rows.push(row); }
+      row.cells.push({ x: x, text: item.str || "" });
+    });
+    return rows.sort(function(a, b) { return b.y - a.y; }).map(function(row) {
+      return row.cells.sort(function(a, b) { return a.x - b.x; }).map(function(cell) { return cell.text; }).join(" ").trim();
+    }).filter(Boolean);
+  }
+
+  async function extractTextFromPdf(file) {
+    if (!window.pdfjsLib) throw new Error("PDF読取機能を読み込めませんでした。");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+    var data = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: data }).promise;
+    var lines = [];
+    for (var pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+      var page = await pdf.getPage(pageNo);
+      var content = await page.getTextContent();
+      lines = lines.concat(pdfItemsToLines(content.items));
+    }
+    if (lines.join("").replace(/\s/g, "").length >= 40) return lines.join("\n");
+    if (!window.Tesseract) throw new Error("画像PDFのOCR機能を読み込めませんでした。");
+    setImportStatus("画像形式のPDFです。OCRで文字を読み取っています…", "busy");
+    var ocrText = [];
+    var worker = await Tesseract.createWorker("jpn");
+    try {
+      for (var ocrPageNo = 1; ocrPageNo <= pdf.numPages; ocrPageNo++) {
+        setImportStatus("OCR読取中… " + ocrPageNo + " / " + pdf.numPages + "ページ", "busy");
+        var ocrPage = await pdf.getPage(ocrPageNo);
+        var viewport = ocrPage.getViewport({ scale: 2 });
+        var canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await ocrPage.render({ canvasContext: canvas.getContext("2d"), viewport: viewport }).promise;
+        var result = await worker.recognize(canvas);
+        ocrText.push(result.data.text || "");
+      }
+    } finally {
+      await worker.terminate();
+    }
+    return ocrText.join("\n");
+  }
+
+  function parseEstimateText(text, originalName) {
+    var normalized = String(text || "").replace(/￥/g, "¥").replace(/[，]/g, ",");
+    var customerMatch = normalized.match(/^\s*([^\n]{1,60}?)\s*(御中|様)\s*$/m) || normalized.match(/([^\n]{1,50}?)\s+(御中|様)/);
+    var customer = customerMatch ? customerMatch[1].trim() : originalName.replace(/_?御?見積書.*$/i, "").replace(/御中|様/g, "");
+    var isCompany = customerMatch && customerMatch[2] === "御中";
+    var orderMatch = normalized.match(/(?:注文番号|見積番号)\s*[:：]?\s*(NSL[-－][A-Za-z0-9-]+)/i) || normalized.match(/NSL[-－]\d{6,}(?:-\d+)?/i);
+    var subtotalMatch = normalized.match(/小計(?:（税抜）)?\s*¥?\s*([\d,]+)/);
+    var taxMatch = normalized.match(/消費税(?:（10%）)?\s*¥?\s*([\d,]+)/);
+    var totalMatches = Array.from(normalized.matchAll(/(?:合計金額|お見積金額)[^\d\n]*([\d,]+)/g));
+    var subtotal = subtotalMatch ? parseMoney(subtotalMatch[1]) : 0;
+    var tax = taxMatch ? parseMoney(taxMatch[1]) : 0;
+    var total = totalMatches.length ? parseMoney(totalMatches[totalMatches.length - 1][1]) : subtotal + tax;
+    if (!subtotal && total) subtotal = Math.round(total / 1.1);
+    if (!tax && total) tax = total - subtotal;
+    var items = [];
+    normalized.split(/\n/).forEach(function(line) {
+      if (/商品名|小計|消費税|割引|合計金額/.test(line)) return;
+      var match = line.match(/^\s*(.+?)\s+(ID|枚|件|時間|式|セット|月)\s+(\d+)\s+¥?\s*([\d,]+)\s+¥?\s*([\d,]+)\s*$/i);
+      if (match) {
+        items.push({ name: match[1].trim(), unit: match[2], qty: Number(match[3]), unitEx: parseMoney(match[4]), subtotalEx: parseMoney(match[5]), tax: calcTax(parseMoney(match[5])) });
+      }
+    });
+    if (!items.length) {
+      items.push({ name: "見積書記載のアプリ開発・サービス一式", unit: "式", qty: 1, unitEx: subtotal, subtotalEx: subtotal, tax: tax });
+    }
+    return {
+      ctype: isCompany ? "法人" : "個人",
+      company: isCompany ? customer : "",
+      name: isCompany ? "【代表者名を入力】" : customer,
+      address: "",
+      email: "",
+      payment: "銀行振込",
+      items: items,
+      subtotal: subtotal,
+      tax: tax,
+      discount: 0,
+      total: total || subtotal + tax,
+      orderNo: orderMatch ? (orderMatch[1] || orderMatch[0]).replace(/－/g, "-") : "NSL-" + nowStamp(),
+      customerNo: customerNoStamp()
+    };
+  }
+
+  async function importEstimatePdf(file) {
+    if (!file) return;
+    if (file.type && file.type !== "application/pdf") {
+      setImportStatus("PDFファイルを選択してください。", "error");
+      return;
+    }
+    setImportStatus("見積書PDFを読み取っています…", "busy");
+    try {
+      var text = await extractTextFromPdf(file);
+      state = parseEstimateText(text, file.name);
+      state.addressee = state.company ? state.company + " 御中" : state.name + " 様";
+      state.fileName = file.name;
+      state.contractFileName = (state.company || state.name).replace(/【|】/g, "") + "_契約書_" + state.orderNo + ".pdf";
+      document.getElementById("contractDocument").innerHTML = buildContractBodyHtml();
+      document.getElementById("importSummary").textContent = "読取結果：" + (state.company || state.name) + " / " + state.orderNo + " / " + yen(state.total) + "（税込）";
+      document.getElementById("importResult").classList.remove("hidden");
+      setImportStatus("契約書を自動作成しました。内容を確認してPDFを保管してください。", "done");
+      document.getElementById("importResult").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      setImportStatus("読み取りに失敗しました。別のPDFを選ぶか、PDFを開いて印刷し直してからお試しください。", "error");
+    }
+  }
+
   function saveMailApiUrl() {
     var apiUrl = getMailApiUrl();
     if (typeof window !== "undefined" && window.localStorage) {
@@ -1138,6 +1398,248 @@
       setMailApiStatus("送信口URLを消しました。いまは送信確認画面として表示しています。", "warn");
     }
     renderMailStatus();
+  }
+
+  function setStorageStatus(message) {
+    ["storageStatus", "contractStorageStatus"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = message;
+    });
+  }
+
+  function openDirectoryDb() {
+    return new Promise(function(resolve, reject) {
+      if (!window.indexedDB) return reject(new Error("IndexedDB未対応"));
+      var request = indexedDB.open(DIRECTORY_DB_NAME, 1);
+      request.onupgradeneeded = function() {
+        if (!request.result.objectStoreNames.contains(DIRECTORY_STORE_NAME)) {
+          request.result.createObjectStore(DIRECTORY_STORE_NAME);
+        }
+      };
+      request.onsuccess = function() { resolve(request.result); };
+      request.onerror = function() { reject(request.error); };
+    });
+  }
+
+  async function rememberDirectoryHandle(handle) {
+    try {
+      var db = await openDirectoryDb();
+      await new Promise(function(resolve, reject) {
+        var tx = db.transaction(DIRECTORY_STORE_NAME, "readwrite");
+        tx.objectStore(DIRECTORY_STORE_NAME).put(handle, "nslBase");
+        tx.oncomplete = resolve;
+        tx.onerror = function() { reject(tx.error); };
+      });
+      db.close();
+    } catch (e) {}
+  }
+
+  async function restoreDirectoryHandle() {
+    if (!window.showDirectoryPicker) {
+      setStorageStatus("Safariでは固定フォルダーへ直接保存できません。Chromeで開くか、通常ダウンロードをご利用ください。");
+      return;
+    }
+    try {
+      var db = await openDirectoryDb();
+      nslBaseDirectoryHandle = await new Promise(function(resolve, reject) {
+        var tx = db.transaction(DIRECTORY_STORE_NAME, "readonly");
+        var req = tx.objectStore(DIRECTORY_STORE_NAME).get("nslBase");
+        req.onsuccess = function() { resolve(req.result || null); };
+        req.onerror = function() { reject(req.error); };
+      });
+      db.close();
+      if (nslBaseDirectoryHandle) {
+        setStorageStatus("保存先「" + nslBaseDirectoryHandle.name + "」を記憶しています。保管時に必要なら許可を確認します。");
+      }
+    } catch (e) {}
+  }
+
+  async function chooseNslFolder() {
+    if (!window.showDirectoryPicker) {
+      alert("固定フォルダーへの直接保存はChromeまたはEdgeで利用できます。現在のブラウザでは、PDFを通常ダウンロードします。");
+      setStorageStatus("固定フォルダー保存は未対応です。PDFはダウンロード保存になります。");
+      return false;
+    }
+    try {
+      nslBaseDirectoryHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      await rememberDirectoryHandle(nslBaseDirectoryHandle);
+      setStorageStatus("保存先「" + nslBaseDirectoryHandle.name + "」を設定しました。見積書・契約書フォルダーへ自動振分けします。");
+      return true;
+    } catch (e) {
+      if (e && e.name !== "AbortError") alert("保存先を設定できませんでした。");
+      return false;
+    }
+  }
+
+  async function ensureDirectoryPermission() {
+    if (!nslBaseDirectoryHandle) return false;
+    var options = { mode: "readwrite" };
+    if ((await nslBaseDirectoryHandle.queryPermission(options)) === "granted") return true;
+    return (await nslBaseDirectoryHandle.requestPermission(options)) === "granted";
+  }
+
+  function downloadBlob(blob, fileName) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = safeFileName(fileName);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  async function createPdfBlob(element, fileName) {
+    if (!window.html2pdf) throw new Error("PDF作成機能を読み込めませんでした。通信状況をご確認ください。");
+    var clone = element.cloneNode(true);
+    clone.removeAttribute("contenteditable");
+    clone.querySelectorAll("[contenteditable]").forEach(function(node) { node.removeAttribute("contenteditable"); });
+    var holder = document.createElement("div");
+    holder.style.position = "fixed";
+    holder.style.left = "-100000px";
+    holder.style.top = "0";
+    holder.style.width = element.classList.contains("contract") ? "794px" : "720px";
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+    try {
+      return await html2pdf().set({
+        margin: element.classList.contains("contract") ? [9, 8, 9, 8] : [8, 8, 8, 8],
+        filename: safeFileName(fileName),
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"], avoid: ["tr", "h3"] }
+      }).from(clone).outputPdf("blob");
+    } finally {
+      holder.remove();
+    }
+  }
+
+  async function saveDocumentPdf(type) {
+    var isContract = type === "contract";
+    var element = document.getElementById(isContract ? "contractDocument" : "estimateDocument");
+    var fileName = isContract ? state.contractFileName : state.fileName;
+    if (!element || !fileName) {
+      alert("先に書類を作成してください。");
+      return;
+    }
+    setStorageStatus("PDFを作成しています…");
+    try {
+      var blob = await createPdfBlob(element, fileName);
+      if (!nslBaseDirectoryHandle && window.showDirectoryPicker) {
+        var selected = await chooseNslFolder();
+        if (!selected) return;
+      }
+      if (nslBaseDirectoryHandle && await ensureDirectoryPermission()) {
+        var folder = await nslBaseDirectoryHandle.getDirectoryHandle(isContract ? "契約書" : "見積書", { create: true });
+        var file = await folder.getFileHandle(safeFileName(fileName), { create: true });
+        var writable = await file.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        setStorageStatus((isContract ? "契約書/" : "見積書/") + safeFileName(fileName) + " に保管しました。");
+      } else {
+        downloadBlob(blob, fileName);
+        setStorageStatus(safeFileName(fileName) + " をダウンロードしました。");
+      }
+    } catch (e) {
+      setStorageStatus("PDFを保管できませんでした。");
+      alert(e.message || "PDFを保管できませんでした。");
+    }
+  }
+
+  function getContractAmounts() {
+    var setup = 0;
+    var monthly = 0;
+    var development = 0;
+    state.items.forEach(function(item) {
+      if (/初期設定/.test(item.name)) setup += item.subtotalEx;
+      else if (/データ管理|月額|保守|サブスク|クラウド管理/.test(item.name)) monthly += item.subtotalEx;
+      else development += item.subtotalEx;
+    });
+    var remainingDiscount = state.discount || 0;
+    var applied = Math.min(development, remainingDiscount);
+    development -= applied;
+    remainingDiscount -= applied;
+    setup = Math.max(0, setup - remainingDiscount);
+    return { development: development, setup: setup, monthly: monthly };
+  }
+
+  function buildContractBodyHtml() {
+    var customer = state.company || state.name;
+    var primaryItems = state.items.filter(function(item) {
+      return !/初期設定|データ管理|月額|保守|サブスク|クラウド管理/.test(item.name);
+    });
+    if (!primaryItems.length) primaryItems = state.items.slice();
+    var appNames = primaryItems.map(function(item) { return item.name; });
+    var appName = appNames.slice(0, 3).join("・") + (appNames.length > 3 ? "ほか" : "");
+    var functions = state.items.map(function(item) {
+      return escapeHtml(item.name) + "（" + escapeHtml(formatUnit(item.unit)) + " × " + item.qty + "）";
+    }).join("<br>");
+    var amounts = getContractAmounts();
+    var clauses = [
+      ["第1条（目的及び適用範囲）", "乙は、甲の業務用アプリケーション、Webアプリケーション、AI機能その他これらに付随するサービス（以下『本サービス』という。）を、見積書、仕様書又は別紙（以下『個別資料』という。）に定める内容で提供する。本契約と個別資料の内容が異なる場合は、個別資料、見積書、本契約の順に優先して適用する。"],
+      ["第2条（開発内容及び甲の協力）", "本サービスの機能、納期、納品方法、料金その他の条件は個別資料に定める。個別資料に記載のない機能、画面、帳票、データ移行又は外部連携は本契約の対象外とする。甲は、乙の業務に必要な資料、画像、文章、アカウントその他の情報を適時かつ正確に提供する。甲の提供遅延又は内容不備により生じた納期遅延について、乙は責任を負わない。"],
+      ["第3条（仕様変更及び追加開発）", "当初の仕様に含まれない変更、追加又は削除は追加開発とし、乙が費用及び納期を提示し、甲が書面又は電磁的方法により承諾した後に実施する。日常的な口頭、電話又はチャットでの相談・要望のみをもって、仕様変更の合意とはしない。"],
+      ["第4条（納品及び検収）", "乙は、個別資料に定める方法により本アプリ又は成果物を利用可能な状態にし、甲へ納品完了を通知する。通知日を納品日とする。甲は納品日から7営業日以内に動作確認を行い、仕様に照らした具体的な不具合がある場合は乙へ通知する。この期間に通知がない場合、検収は完了したものとみなす。乙は契約範囲内の不具合を合理的な期間内に修正する。"],
+      ["第5条（初期費用及び支払期日）", "甲は、初期開発費、初期設定費その他個別資料に定める初期費用を、契約締結日から30日以内に乙の指定口座へ振り込む方法により支払う。振込手数料は甲の負担とする。消費税その他の公租公課は別途加算する。甲が支払期限を過ぎても支払わない場合、乙は相当期間を定めて催告のうえ、本サービスの提供を停止できる。"],
+      ["第6条（無償利用期間及び保守料の発生）", "納品日から30日間を無償の試験・利用期間とし、この期間は保守・サポート料金を請求しない。月額保守・クラウド管理費は、前項の無償期間満了日の翌日から発生するものとし、以後、毎月、個別資料に定める金額を支払う。初回月額は、無償期間満了日の翌日が属する月分から発生する。保守料の支払期日及び方法は、乙が発行する請求書又は別途合意する決済方法による。"],
+      ["第7条（保守・サポートの範囲）", "月額保守・クラウド管理費には、通常利用の範囲でのクラウド環境・データベース管理、障害の一次確認、軽微な不具合修正、セキュリティ対応、バックアップの標準運用及び操作に関する問い合わせ対応を含む。新機能、新画面、新帳票、大幅な仕様又はレイアウト変更、データ移行・入力代行、現地訪問、研修及び外部サービスの大規模な仕様変更への対応は、別途見積りとする。"],
+      ["第8条（外部サービス）", "本サービスは、クラウド、生成AI、APIその他の第三者サービスを利用する場合がある。第三者サービスの障害、停止、仕様変更、料金改定又は通信障害等、乙の合理的支配を超える事由による影響について、乙は責任を負わない。通常利用の範囲を著しく超える利用又は外部サービス料金の大幅な改定がある場合、甲乙は保守料その他の負担を協議する。"],
+      ["第9条（データ及び個人情報）", "甲が本サービスに登録した業務データ及び個人情報に関する権利は、甲又は正当な権利者に帰属する。乙は、本契約の履行に必要な範囲を超えてこれらを利用しない。甲乙は、相手方の個人情報及び機密情報を法令及び本契約に従い適切に取り扱い、相手方の承諾なく第三者へ開示しない。ただし、外部サービス又は再委託先に必要最小限の範囲で開示する場合を除く。"],
+      ["第10条（知的財産権及び利用権）", "乙が従前から保有するプログラム、テンプレート、共通UI、ライブラリ、ノウハウその他の汎用的技術資産の権利は乙又は正当な権利者に帰属する。甲は、初期費用の完済後、本アプリを自己の業務目的の範囲で利用できる。甲は乙の事前承諾なく、本アプリ又は乙の技術資産を第三者へ販売、再配布、貸与又は提供してはならない。"],
+      ["第11条（アカウント管理及び禁止事項）", "甲は、ID、パスワード、APIキーその他の認証情報を自己の責任で管理し、漏えい又は不正利用のおそれを知ったときは直ちに乙へ通知する。甲は、不正アクセス、法令違反、第三者の権利侵害、過大な負荷の付与、リバースエンジニアリング、アカウントの不正な譲渡・貸与その他本サービスの安全な運用を妨げる行為をしてはならない。"],
+      ["第12条（契約期間及び終了）", "本契約は契約締結日から効力を生じ、保守・クラウド管理の契約期間は、個別資料に定める期間とする。期間満了日の30日前までに、いずれか一方から更新しない旨の通知がない場合、同一条件で1年間更新する。料金の未払い、重大な契約違反又は反社会的勢力との関係等の事由がある場合、相手方は相当期間の催告又は必要な場合には催告なく、本契約の全部又は一部を解除できる。"],
+      ["第13条（契約終了後の取扱い）", "契約終了後、乙が管理するクラウド環境及び本サービスの継続利用はできない。甲がデータ返却を希望する場合は、契約終了後30日以内に申し出るものとし、乙は利用可能な形式での出力に合理的な範囲で対応する。形式変換、他サービスへの移行、環境構築、ソースコード整理その他の移行支援は別途有償とする。"],
+      ["第14条（責任制限）", "乙は、本サービスが甲のすべての業務目的に完全に適合すること、障害が発生しないこと又は外部サービスが継続して提供されることを保証しない。乙の責めに帰すべき事由により甲に損害が生じた場合、乙の損害賠償責任は、乙の故意又は重大な過失がある場合を除き、甲が本契約に基づき乙へ実際に支払った初期費用の額を上限とする。乙は逸失利益、間接損害及び特別損害について責任を負わない。"],
+      ["第15条（協議、準拠法及び管轄）", "本契約に定めのない事項又は解釈上の疑義は、甲乙が誠意をもって協議し解決する。本契約は日本法を準拠法とし、本契約に関する第一審の専属的合意管轄裁判所は、乙の所在地を管轄する地方裁判所又は簡易裁判所とする。"]
+    ];
+    var articleHtml = clauses.map(function(clause) {
+      return "<h3>" + clause[0] + "</h3><p>" + clause[1] + "</p>";
+    }).join("");
+    return '<div class="contract-title">アプリ開発・AI サブスクリプションサービス契約書</div>' +
+      '<p><b>' + escapeHtml(customer) + '</b>（以下「甲」という。）と、NSL相談所（以下「乙」という。）は、システム開発、利用及び保守に関し、次のとおり契約（以下「本契約」という。）を締結する。</p>' +
+      articleHtml +
+      '<p>本契約締結の証として、本書を2通作成し、甲乙記名押印のうえ各1通を保有する。電子契約により締結する場合は、電子署名が付された電磁的記録をもって本書と同等の効力を有する。</p>' +
+      '<div class="contract-signatures"><p>契約締結日　' + escapeHtml(japaneseDate()) + '</p><br>' +
+      '<p><b>甲（利用者）</b></p><p>所在地：' + escapeHtml(state.address || "　　　　　　　　　　　　　　　　") + '</p>' +
+      '<p>会社名：' + escapeHtml(state.company || state.name) + '</p><p>代表者名：' + escapeHtml(state.name) + '　　　　　　　　　印</p><br>' +
+      '<p><b>乙（開発者）</b></p><p>所在地：〒323-0807 栃木県小山市城東7-6-11</p><p>屋号：NSL相談所（Next Sales Lab）</p><p>代表者：浅野 隆史　　　　　　　　　印</p></div>' +
+      '<div class="contract-appendix"><h2>別紙　サービス内容・料金表</h2>' +
+      '<table><tr><th>アプリ名称</th><td>' + escapeHtml(appName) + '</td></tr>' +
+      '<tr><th>導入目的</th><td>業務の効率化、入力・管理作業の削減及び情報の一元化</td></tr>' +
+      '<tr><th>主な機能</th><td>' + functions + '</td></tr>' +
+      '<tr><th>納品方法</th><td>本番環境への反映又は甲乙が合意する方法</td></tr>' +
+      '<tr><th>検収期間</th><td>納品日から7営業日</td></tr>' +
+      '<tr><th>無償利用期間</th><td>納品日から30日間（保守料無料）</td></tr>' +
+      '<tr><th>保守料発生</th><td>無償利用期間満了日の翌日から</td></tr></table>' +
+      '<table class="amount-table"><tr><th>項目</th><th>金額（税別）</th><th>支払条件</th></tr>' +
+      '<tr><td>初期開発費</td><td>' + yen(amounts.development) + '</td><td>契約締結日から30日以内</td></tr>' +
+      '<tr><td>初期設定費</td><td>' + yen(amounts.setup) + '</td><td>契約締結日から30日以内</td></tr>' +
+      '<tr><td>月額保守・クラウド管理費</td><td>' + yen(amounts.monthly) + '</td><td>無償利用期間満了日の翌日から発生</td></tr>' +
+      '<tr><td>外部サービス利用料</td><td>必要な場合は別途</td><td>必要な場合は別途</td></tr>' +
+      '<tr><td>追加開発費</td><td>別途見積り</td><td>甲の承諾後に実施</td></tr></table>' +
+      '<p class="contract-note">※ 月額保守・クラウド管理費に含まれる範囲及び対象外の作業は、第7条の定めによる。</p></div>';
+  }
+
+  function createContract() {
+    if (!state || !state.orderNo) {
+      alert("先に見積書を作成してください。");
+      return;
+    }
+    document.getElementById("contractFileName").textContent = state.contractFileName;
+    document.getElementById("contractDocument").innerHTML = buildContractBodyHtml();
+    showScreen(4);
+  }
+
+  function buildContractDocument(title) {
+    var contract = document.getElementById("contractDocument");
+    if (!contract) return "";
+    var css = document.querySelector("style").textContent;
+    var contractHtml = contract.outerHTML.replace(/ contenteditable="true"/g, "");
+    return "<!DOCTYPE html><html lang=\"ja\"><head><meta charset=\"UTF-8\">" +
+      "<title>" + escapeHtml(title || state.contractFileName || "contract") + "</title>" +
+      "<style>" + css + " body{background:#fff;margin:0;padding:18px;} .contract{margin:0 auto;max-width:794px;}</style>" +
+      "</head><body>" + contractHtml + "</body></html>";
   }
 
   function setSendButtonsDisabled(disabled) {
@@ -1163,8 +1665,12 @@
   }
 
   function buildMailRequest(target) {
+    var isContract = state.mailMode === "contract";
+    var activeFileName = isContract ? state.contractFileName : state.fileName;
+    var activeHtml = isContract ? buildContractDocument(activeFileName) : buildEstimateDocument(activeFileName);
     return {
       target: target,
+      documentType: isContract ? "contract" : "estimate",
       order: {
         orderNo: state.orderNo,
         customerNo: state.customerNo,
@@ -1189,8 +1695,10 @@
         subject: normalizeSubject(document.getElementById("adminSubject").textContent),
         body: document.getElementById("adminBody").textContent
       },
-      estimateFileName: state.fileName,
-      estimateHtml: buildEstimateDocument(state.fileName)
+      estimateFileName: activeFileName,
+      estimateHtml: activeHtml,
+      contractFileName: isContract ? state.contractFileName : "",
+      contractHtml: isContract ? activeHtml : ""
     };
   }
 
@@ -1253,6 +1761,7 @@
     var company = (params.get("company") || "").trim();
     var name = (params.get("name") || "").trim();
     var email = (params.get("email") || "").trim();
+    var address = (params.get("address") || "").trim();
 
     if (ctype) {
       var radio = document.querySelector('input[name="ctype"][value="' + ctype + '"]');
@@ -1261,6 +1770,7 @@
     if (company) document.getElementById("company").value = company;
     if (name) document.getElementById("name").value = name;
     if (email) document.getElementById("email").value = email;
+    if (address) document.getElementById("address").value = address;
   }
 
   function initProducts() {
@@ -1376,7 +1886,7 @@
   }
 
   function showScreen(n) {
-    for (var i = 1; i <= 4; i++) {
+    for (var i = 1; i <= 5; i++) {
       document.getElementById("screen" + i).classList.toggle("hidden", i !== n);
       var tab = document.getElementById("stepTab" + i);
       tab.classList.remove("active", "done");
@@ -1390,7 +1900,7 @@
   function updateHomeButtonVisibility(screenNo) {
     var btn = document.getElementById("homeFab");
     if (!btn) return;
-    btn.classList.toggle("hidden", !(screenNo === 3 || screenNo === 4));
+    btn.classList.toggle("hidden", screenNo < 3);
   }
 
   function getToolboxHomeUrl() {
@@ -1431,6 +1941,7 @@
       ctype: document.querySelector("input[name=ctype]:checked").value,
       company: document.getElementById("company").value.trim(),
       name: name,
+      address: document.getElementById("address").value.trim(),
       email: email,
       payment: document.getElementById("payment").value,
       items: items,
@@ -1443,6 +1954,7 @@
     };
     state.addressee = state.company ? state.company + " 御中" : state.name + " 様";
     state.fileName = (state.company ? state.company + "御中" : state.name + "様") + "_御見積書_" + state.orderNo + ".pdf";
+    state.contractFileName = (state.company ? state.company : state.name) + "_契約書_" + state.orderNo + ".pdf";
 
     openPerformanceApp();
     showScreen(2);
@@ -1494,21 +2006,35 @@
         '<td class="num">' + yen(item.subtotalEx) + "</td></tr>";
     }).join("");
 
-    renderScreen4();
+    renderMailScreen("estimate");
   }
 
-  function renderScreen4() {
+  function prepareDocumentMail(type) {
+    if (type === "contract" && !document.getElementById("contractDocument").innerHTML.trim()) {
+      createContract();
+      return;
+    }
+    renderMailScreen(type);
+    showScreen(5);
+  }
+
+  function renderMailScreen(type) {
+    var isContract = type === "contract";
+    state.mailMode = isContract ? "contract" : "estimate";
+    state.mailStatus = { customerSentAt: "", adminSentAt: "" };
     document.getElementById("mailTo").textContent = state.email;
-    document.getElementById("customerSubject").textContent = "件名：NSL相談所 御見積書送付のご案内（" + state.orderNo + "）";
+    document.getElementById("customerSubject").textContent = "件名：NSL相談所 " + (isContract ? "契約書" : "御見積書") + "送付のご案内（" + state.orderNo + "）";
     document.getElementById("mailBody").textContent =
-      state.addressee + "\n\n平素よりお世話になっております。\nNSL相談所の浅野です。\n\nこの度はお問い合わせをいただき、誠にありがとうございます。\n御見積書を送付いたしますので、ご確認をお願いいたします。\n\nご検討のうえ、ご不明点や修正のご希望がございましたら、お気軽にご連絡ください。\n\n【お問い合わせ先】\nNSL相談所\n代表 浅野隆史\nTEL：090-8100-1417\nMAIL：asano@nextsaleslab.com\n\n今後ともよろしくお願いいたします。";
-    document.getElementById("mailAttach").textContent = state.fileName;
+      state.addressee + "\n\n平素よりお世話になっております。\nNSL相談所の浅野です。\n\n" +
+      (isContract ? "御見積内容を反映した契約書" : "御見積書") + "を送付いたしますので、ご確認をお願いいたします。\n\n" +
+      "ご不明点や修正のご希望がございましたら、お気軽にご連絡ください。\n\n【お問い合わせ先】\nNSL相談所\n代表 浅野隆史\nTEL：090-8100-1417\nMAIL：asano@nextsaleslab.com\n\n今後ともよろしくお願いいたします。";
+    document.getElementById("mailAttach").textContent = isContract ? state.contractFileName : state.fileName;
 
     var displayName = state.company || state.name;
     var itemSummary = state.items.map(function(item) { return item.name + " x" + item.qty; }).join(", ");
-    document.getElementById("adminSubject").textContent = "件名：【見積依頼受付】" + displayName + " 様 / " + state.orderNo;
+    document.getElementById("adminSubject").textContent = "件名：【" + (isContract ? "契約書送信" : "見積依頼受付") + "】" + displayName + " 様 / " + state.orderNo;
     document.getElementById("adminBody").textContent =
-      "見積依頼を受け付けました。\n\n" +
+      (isContract ? "契約書の送信内容です。" : "見積依頼を受け付けました。") + "\n\n" +
       "注文番号: " + state.orderNo +
       "\n顧客番号: " + state.customerNo +
       "\n注文者区分: " + state.ctype +
@@ -1521,11 +2047,11 @@
       "\n消費税: " + yen(state.tax) +
       "\n割引額（税抜）: " + yenDiscount(state.discount) +
       "\n合計金額（税込）: " + yen(state.total) +
-      "\nファイル名: " + state.fileName +
-      "\nPDF URL: https://drive.google.com/...（自動発行）";
+      "\nファイル名: " + (isContract ? state.contractFileName : state.fileName);
 
-    var pdfLink = '<a onclick="openPdfDemo()">PDFを開く</a>';
-    var pdfUrlLink = '<a onclick="openPdfDemo()">https://drive.google.com/...</a>';
+    var previewType = isContract ? "'contract'" : "'estimate'";
+    var pdfLink = '<a onclick="openPdfDemo(' + previewType + ')">PDFを開く</a>';
+    var pdfUrlLink = '<a onclick="openPdfDemo(' + previewType + ')">PDFを開く</a>';
 
     document.getElementById("orderRow").innerHTML =
       "<td>" + state.orderNo + "</td><td>" + state.customerNo + "</td><td>" + state.name + "</td>" +
@@ -1667,10 +2193,12 @@
     form.submit();
   }
 
-  function openPdfDemo() {
-    var est = document.querySelector(".estimate");
-    if (!est || !state.fileName) {
-      alert("先に注文フォームを送信してください。");
+  function openPdfDemo(type) {
+    var isContract = type === "contract";
+    var documentElement = document.getElementById(isContract ? "contractDocument" : "estimateDocument");
+    var fileName = isContract ? state.contractFileName : state.fileName;
+    if (!documentElement || !fileName || (isContract && !documentElement.innerHTML.trim())) {
+      alert("先に書類を作成してください。");
       return;
     }
     var css = document.querySelector("style").textContent;
@@ -1679,10 +2207,10 @@
       alert("ポップアップがブロックされました。ブラウザの設定で許可してください。");
       return;
     }
-    var estHtml = est.outerHTML.replace(/ contenteditable="true"/g, "");
+    var documentHtml = documentElement.outerHTML.replace(/ contenteditable="true"/g, "");
     w.document.write(
       "<!DOCTYPE html><html lang=\"ja\"><head><meta charset=\"UTF-8\">" +
-      "<title>" + state.fileName + "</title>" +
+      "<title>" + fileName + "</title>" +
       "<style>" + css +
       " body{background:#525659;padding:26px 10px;}" +
       " .pdf-bar{max-width:660px;margin:0 auto 14px;color:#fff;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}" +
@@ -1690,9 +2218,9 @@
       " .pdf-page{background:#fff;max-width:660px;margin:0 auto;box-shadow:0 4px 18px rgba(0,0,0,.45);padding:10px;}" +
       " @media print{ body{background:#fff;padding:0;} .pdf-bar{display:none;} .pdf-page{box-shadow:none;max-width:none;} }" +
       "</style></head><body>" +
-      "<div class=\"pdf-bar\"><span>📄 " + state.fileName + "</span>" +
+      "<div class=\"pdf-bar\"><span>📄 " + fileName + "</span>" +
       "<button onclick=\"window.print()\">印刷 / PDFとして保存</button></div>" +
-      "<div class=\"pdf-page\">" + estHtml + "</div>" +
+      "<div class=\"pdf-page\">" + documentHtml + "</div>" +
       "</body></html>"
     );
     w.document.close();
@@ -1701,6 +2229,7 @@
   function resetDemo() {
     document.getElementById("company").value = "";
     document.getElementById("name").value = "";
+    document.getElementById("address").value = "";
     document.getElementById("email").value = "";
     document.getElementById("discount").value = "0";
     customProducts = [];
@@ -1713,10 +2242,14 @@
 
   if (isToolboxMode()) {
     renderToolboxMode();
+  } else if (isContractMode()) {
+    renderContractImportMode();
+    restoreDirectoryHandle();
   } else {
     initProducts();
     applyUrlPrefill();
     loadMailApiUrl();
+    restoreDirectoryHandle();
     renderCustomProducts();
     updateTotal();
     updateHomeButtonVisibility(1);
