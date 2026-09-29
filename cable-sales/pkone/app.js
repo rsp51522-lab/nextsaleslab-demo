@@ -5,7 +5,27 @@ const ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const xml=s=>new DOMParser().parseFromString(s,'application/xml');
 const serialize=x=>new XMLSerializer().serializeToString(x);
 const files={sales:null,confirmed:null,annual:null};
-const month=$('#month');for(const n of [6,7,8,10,11,12,1,2,3,4,5])month.add(new Option(`${n}月`,n));
+const month=$('#month'),year=$('#year');
+for(const n of [6,7,8,10,11,12,1,2,3,4,5])month.add(new Option(`${n}月`,n));
+for(let y=2026;y<=Math.max(2028,new Date().getFullYear()+1);y++)year.add(new Option(`${y}年度`,y));
+let db,loaded=false,revision=0,storedSummaries={};
+function storageKey(kind,n=Number(month.value),y=Number(year.value)){return `${y}:${n}:${kind}`;}
+function openStore(){return new Promise((resolve,reject)=>{const req=indexedDB.open('pkone-monthly-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('items');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+function readItem(key){return new Promise((resolve,reject)=>{const req=db.transaction('items','readonly').objectStore('items').get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+function writeItem(key,value){return new Promise((resolve,reject)=>{const req=db.transaction('items','readwrite').objectStore('items').put(value,key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error);});}
+function deleteItem(key){return new Promise((resolve,reject)=>{const req=db.transaction('items','readwrite').objectStore('items').delete(key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error);});}
+function fileLabel(key){$(`#${key}-name`).textContent=files[key]?.name||'未選択';}
+async function loadSelection(){
+ const id=++revision;loaded=false;const n=Number(month.value),y=Number(year.value);
+ const entries=await Promise.all(['sales','confirmed'].map(k=>readItem(storageKey(k,n,y))));
+ const annual=await readItem(`${y}:annual`);if(id!==revision)return;
+ [files.sales,files.confirmed]=entries;files.annual=annual||null;
+ for(const k of Object.keys(files)){fileLabel(k);$(`#${k}`).value='';}
+ storedSummaries={};for(const m of fiscalMonths){const d=await readItem(storageKey('summary',m,y));if(d)storedSummaries[m]=d;}
+ if(id!==revision)return;loaded=true;render();
+}
+async function initialize(){try{db=await openStore();const selected=await readItem('selection');year.value=String(selected?.year||2026);month.value=String(selected?.month||9);await loadSelection();}catch(e){console.error(e);$('#status').textContent='ブラウザ内の保管領域を開けません。設定を確認してください。';$('#status').className='notice error';}}
+
 function monthCol(n,base){return String.fromCharCode(base+[6,7,8,9,10,11,12,1,2,3,4,5].indexOf(Number(n)));}
 function value(map,ref){return Number(map[ref])||0;}
 function repName(name){const raw=String(name||'').replace(/\s+/g,'');return ['浅野','小林','西沢','遠藤'].find(n=>raw===n||raw.startsWith(n)&&/^[ァ-ヶーぁ-ゖ]+$/.test(raw.slice(n.length)))||raw;}
@@ -71,15 +91,26 @@ function showView(){
  $('#import-panel').hidden=view!=='dashboard';$('#empty-view').hidden=!$('#result').hidden||view==='dashboard';
  if(!$('#result').hidden)window.scrollTo({top:0,behavior:'auto'});
 }
-function progressBar(actual,target){const ratio=target>0?actual/target:0,pct=target>0?Math.round(ratio*100):0;return `<div class="track" role="img" aria-label="進捗 ${pct}%"><span class="${ratio>=1?'over':''}" style="width:${Math.max(0,Math.min(100,pct))}%"></span></div>`;}
-function renderProgress(annual,d,n){
- const sheet=annual.sheets['部署売上']?.map;if(!sheet)throw Error('2026年ファイルに「部署売上」シートがありません。');
- const selected=fiscalMonths.indexOf(n);
- const data=fiscalMonths.map((m,i)=>{const col=monthCol(m,69),target=value(sheet,`${col}10`),saved=value(sheet,`${col}20`);return {month:m,target,actual:i>selected?0:i===selected?d.overall:saved,future:i>selected};});
- $('#monthly-progress').innerHTML=data.map(x=>`<div class="progress-row"><span>${x.month}月</span><div>${progressBar(x.actual,x.target)}</div><strong>${x.future?'未到来':yen(x.actual)} / ${yen(x.target)}</strong></div>`).join('');
- const sum=xs=>xs.reduce((a,x)=>({target:a.target+x.target,actual:a.actual+x.actual}),{target:0,actual:0});
- const periods=[['上期（6〜11月）',sum(data.slice(0,6))],['下期（12〜5月）',sum(data.slice(6))],['年間（6〜5月）',sum(data)]];
- $('#period-progress').innerHTML=periods.map(([label,x])=>`<div class="progress-card"><strong>${label}</strong><div class="line"><span>実績 ${yen(x.actual)}</span><strong>${x.target?Math.round(x.actual/x.target*100):0}%</strong></div>${progressBar(x.actual,x.target)}<small>計画 ${yen(x.target)}</small></div>`).join('');
+const monthlyTarget=4500000;
+function renderProgress(_annual,_d,_n){
+ const data=fiscalMonths.map(m=>({month:m,target:monthlyTarget,actual:storedSummaries[m]?.overall??null}));
+ const max=Math.ceil(Math.max(monthlyTarget,...data.map(x=>x.actual||0))*1.15/1000000)*1000000;
+ const left=52,right=24,top=22,bottom=42,width=700,height=310;
+ const x=i=>left+i*(width-left-right)/11,y=v=>height-bottom-v/max*(height-top-bottom);
+ const targetLine=`${x(0)},${y(monthlyTarget)} ${x(11)},${y(monthlyTarget)}`;
+ const segments=[];let current=[];
+ for(let i=0;i<data.length;i++){
+  if(data[i].actual===null){if(current.length)segments.push(current);current=[];}
+  else current.push(`${x(i)},${y(data[i].actual)}`);
+ }if(current.length)segments.push(current);
+ const axis=[0,monthlyTarget,Math.ceil(max/1000000)*1000000].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line x1="${left}" y1="${y(v)}" x2="${width-right}" y2="${y(v)}" stroke="#dce7ef"/><text x="${left-7}" y="${y(v)+4}" text-anchor="end" fill="#58758e" font-size="11">${(v/10000).toLocaleString('ja-JP')}万</text>`).join('');
+ $('#monthly-progress').innerHTML=`<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月別売上の折れ線グラフ。目標は毎月450万円。実績は入力済みの月だけ表示。">
+ ${axis}<polyline points="${targetLine}" fill="none" stroke="#e0445b" stroke-width="3" stroke-dasharray="8 5"/>
+ ${segments.map(points=>points.includes(' ')?`<polyline points="${points}" fill="none" stroke="#2876a7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:'').join('')}
+ ${data.map((v,i)=>v.actual===null?'':`<circle cx="${x(i)}" cy="${y(v.actual)}" r="5" fill="#2876a7"><title>${v.month}月 実績 ${yen(v.actual)}</title></circle>`).join('')}
+ ${data.map((v,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="12">${v.month}月</text>`).join('')}</svg><div class="chart-legend"><span><i style="background:#e0445b"></i>目標 450万円／月</span><span><i style="background:#2876a7"></i>入力済み実績</span></div>`;
+ const periods=[['上期（6〜11月）',data.slice(0,6)],['下期（12〜5月）',data.slice(6)],['年間（6〜5月）',data]];
+ $('#period-progress').innerHTML=periods.map(([label,items])=>{const actual=items.reduce((sum,v)=>sum+(v.actual||0),0),target=items.length*monthlyTarget,count=items.filter(v=>v.actual!==null).length;return `<div class="progress-card"><strong>${label}</strong><div class="line"><span>入力済み ${count}/${items.length}か月<br>実績 ${yen(actual)}</span><strong>${Math.round(actual/target*100)}%</strong></div><small>期間目標 ${yen(target)}</small></div>`;}).join('');
 }
 async function updateAnnual(book,d,s,n){
  const annual=book.sheets['部署売上'],sales=book.sheets['営業'];if(!annual||!sales||!book.sheets['メンテ'])throw Error('2026年ファイルに「部署売上」「営業」「メンテ」が揃っていません。');
@@ -95,16 +126,17 @@ async function updateAnnual(book,d,s,n){
  for(const sh of [annual,sales])book.zip.file(sh.path,serialize(sh.doc));
  return book.zip.generateAsync({type:'blob',compression:'DEFLATE'});
 }
-async function render(){const status=$('#status');$('#save').disabled=true;$('#result').hidden=true;try{
- if(!files.sales||!files.confirmed||!files.annual){status.textContent='3つのファイルを選んでください。';showView();return;}
+async function render(){if(!loaded)return;const id=++revision,status=$('#status');$('#save').disabled=true;$('#result').hidden=true;status.className='notice';try{
+ if(!files.sales||!files.confirmed||!files.annual){status.textContent='この月の営業実績表・確定ファイルと年度の年間ファイルを選んでください。選択済みのファイルは保管されています。';showView();return;}
  status.textContent='読み込み中…';const n=Number(month.value),sales=salesData(parseXls(await files.sales.arrayBuffer()));
  const [confirmed,annual]=await Promise.all([loadBook(files.confirmed),loadBook(files.annual)]);
- const d=confirmedData(confirmed);
+ const d=confirmedData(confirmed);if(id!==revision)return;
+ await writeItem(storageKey('summary'),{overall:d.overall});storedSummaries[n]={overall:d.overall};
  const warnings=[];if(sales.sourceMonth!==n)warnings.push(`営業実績表は${sales.sourceMonth}月の契約日です。反映先は${n}月です。`);
  const unallocated=d.sales.shared+d.sales.existing+d.sales.tenant+d.sales.op-Object.values(d.repSales).reduce((a,b)=>a+b,0);
  if(unallocated)warnings.push(`担当者別元売上と営業区分売上の差額 ${yen(unallocated)} は担当者に配賦していません。固定費も担当者別には含めません。`);
  if(Math.abs(d.overall-d.sales.total-d.m.total)>1)warnings.push('確定ファイルの合計に営業・メンテ以外の売上が含まれます。');
- const existing=annual.sheets['部署売上'].map;if(existing[`${monthCol(n,69)}40`]||existing[`${monthCol(n,69)}53`])warnings.push('2026年ファイルのこの月には既存値があります。保存時は選択月の対象項目を置き換えます。');
+ const existing=annual.sheets['部署売上'].map;if(existing[`${monthCol(n,69)}40`]||existing[`${monthCol(n,69)}53`])warnings.push('年間ファイルのこの月には既存値があります。ダウンロード時は保管した月の対象項目を置き換えます。');
  $('#warning').hidden=!warnings.length;$('#warning').textContent=warnings.join('　');
  $('#total').textContent=yen(d.overall);$('#sales-total').textContent=yen(d.sales.total);$('#maintenance-total').textContent=yen(d.m.total);
  $('#sales-kpi').textContent=yen(d.sales.total);$('#shared-kpi').textContent=`${d.counts.shared}件`;$('#existing-kpi').textContent=`${d.counts.existing}件`;
@@ -114,7 +146,27 @@ async function render(){const status=$('#status');$('#save').disabled=true;$('#r
  $('#maintenance-rows').innerHTML=[['栃木',d.m.tochigi,d.counts.tochigi],['古河',d.m.koga,d.counts.koga]].flatMap(([name,amounts,counts])=>['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${name} ${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`)).join('');
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
  $('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';showView();
- $('#save').disabled=false;$('#save').onclick=async()=>{try{status.textContent='Excelファイルを作成中…';$('#save').disabled=true;const blob=await updateAnnual(annual,d,sales,n),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`2026年_${n}月反映.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='保存しました。Excelで開いて数式を再計算してください。';}catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
+ $('#save').disabled=false;$('#save').onclick=async()=>{try{
+ status.textContent='保存した各月を年間ファイルに反映中…';$('#save').disabled=true;
+ const y=Number(year.value),book=await loadBook(files.annual);let blob,count=0;
+ for(const m of fiscalMonths){const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
+  if(!sf||!cf)continue;
+  const ss=salesData(parseXls(await sf.arrayBuffer())),dd=confirmedData(await loadBook(cf));
+  if(ss.sourceMonth!==m)throw Error(`${m}月に保管した営業実績表の契約月が${ss.sourceMonth}月です。月の選択を確認してください。`);
+  blob=await updateAnnual(book,dd,ss,m);count++;
+ }
+ if(!count)throw Error('反映できる月がありません。');
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${y}年度_${count}か月反映.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ status.textContent=`${count}か月分を反映した年間ファイルを保存しました。Excelで開いて数式を再計算してください。`;
+ }catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
-for(const key of Object.keys(files))$(`#${key}`).addEventListener('change',e=>{files[key]=e.target.files[0]||null;$(`#${key}-name`).textContent=files[key]?.name||'未選択';render();});month.addEventListener('change',render);
-window.addEventListener('hashchange',showView);showView();
+for(const key of Object.keys(files))$(`#${key}`).addEventListener('change',async e=>{
+ const picked=e.target.files[0];if(!picked||!db)return;
+ try{await writeItem(key==='annual'?`${year.value}:annual`:storageKey(key),picked);
+  if(key==='confirmed'){await deleteItem(storageKey('summary'));delete storedSummaries[Number(month.value)];}
+  files[key]=picked;fileLabel(key);render();
+ }catch(err){$('#status').textContent=`保存できませんでした: ${err.message}`;$('#status').className='notice error';}
+});
+async function selectPeriod(){if(!db)return;try{await writeItem('selection',{year:Number(year.value),month:Number(month.value)});await loadSelection();}catch(e){$('#status').textContent=e.message;$('#status').className='notice error';}}
+month.addEventListener('change',selectPeriod);year.addEventListener('change',selectPeriod);
+window.addEventListener('hashchange',showView);showView();initialize();
