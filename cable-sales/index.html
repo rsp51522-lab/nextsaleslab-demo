@@ -1,0 +1,18 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17365d"><title>ケーブル売上集計</title><link rel="stylesheet" href="./style.css"></head><body>
+<main class="shell">
+ <header><div class="brand"><span class="mark">NSL</span><span>ケーブル売上集計</span></div><span class="header-note">月末の実績表を、そのまま売上表に</span></header>
+ <section class="workspace" aria-labelledby="heading"><div class="intro"><p class="eyebrow">MONTHLY SALES</p><h1 id="heading">実績ファイルを入れるだけ</h1><p>いつものケーブル実績管理表（.xls）を選ぶと、商品別・担当者別の売上を計算します。</p></div>
+  <label id="drop" class="drop"><span class="drop-icon" aria-hidden="true">↥</span><strong>実績管理表を選ぶ</strong><span>ここにドラッグしても読み込めます</span><input id="file" type="file" accept=".xls,application/vnd.ms-excel"></label>
+  <div id="status" class="notice" role="status">ファイルはこの画面の中だけで処理します。サーバーには送信しません。</div>
+ </section>
+ <section id="results" hidden aria-live="polite"><div class="result-head"><div><p class="eyebrow" id="period"></p><h2>売上集計</h2></div><button id="download" type="button" class="primary">Excel売上表を保存</button></div>
+  <div class="stats"><div class="stat"><span>営業売上（キャンセル控除後）</span><strong id="total"></strong></div><div class="stat"><span>対象の契約</span><strong id="contract-count"></strong></div></div>
+  <div id="warnings" class="warning" hidden></div>
+  <div class="card"><h3>営業・売上区分</h3><div class="scroll"><table><thead><tr><th>区分</th><th>戸建真水数／件数</th><th>売上</th></tr></thead><tbody id="categories"></tbody></table></div><p class="table-note">「電話・その他」は、区分別の売上と営業売上を一致させるために表示しています。キャンの売上はマイナスです。</p></div>
+  <div class="card rep-card"><h3>担当者別</h3><div class="scroll"><table><thead><tr><th>担当</th><th>売上</th><th>実績</th><th>戸建真水数</th><th>キャンセル真水</th><th>OP件数</th></tr></thead><tbody id="reps"></tbody></table></div><p class="table-note">実績 ＝ 戸建真水数 − キャンセル真水。売上はキャンセル売上を控除しています。</p></div>
+  <div id="cancel-breakdown" class="card rep-card" hidden><h3>９月のキャンセル内訳</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数</th><th>戻入売上</th></tr></thead><tbody><tr><th>TV</th><td>1</td><td>20,000円</td></tr><tr><th>NET</th><td>2</td><td>42,000円</td></tr><tr><th>TEL</th><td>1</td><td>6,000円</td></tr><tr><th>OP</th><td>1</td><td>4,000円</td></tr><tr><th>合計</th><td>真水3</td><td>72,000円</td></tr></tbody></table></div><p class="table-note">添付の栃木キャンセル集計表に記載された金額です。</p></div>
+  <details class="card detail"><summary>商品ごとの件数・売上を見る</summary><div class="scroll"><table><thead><tr><th>商品</th><th>件数</th><th>単価</th><th>売上</th></tr></thead><tbody id="items"></tbody></table></div></details>
+ </section>
+ <details class="card settings"><summary>単価を確認・変更する</summary><p>初期単価は添付の「売上管理表.xlsx」の栃木PK・151行です。変更内容はこの端末に保存され、次回の集計にも使われます。</p><div id="price-list" class="price-list"></div></details>
+ <p class="footnote">キャンセル真水は実績管理表のキャンセルシートを参照します。９月のキャンセル売上は確認済みの集計表を使用しています。翌月以降のキャンセル売上は、戻入単価の根拠となる「栃木キャンセル」の計算表が必要です。固定費・賞金は含みません。</p>
+</main><script type="module" src="./app.js"></script></body></html>
