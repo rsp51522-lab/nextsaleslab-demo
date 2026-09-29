@@ -10,14 +10,21 @@ let parsed=null,confirmed=null,sourceName='';
 const status=$('#status'),fileInput=$('#file');
 function error(msg){status.textContent=msg;status.className='notice error';$('#results').hidden=true;}
 function value(cell){return cell??'';}
+function canonicalRep(name){
+ const raw=String(name||'').replace(/\s+/g,'').trim();
+ if(!confirmed)return raw;
+ const names=Object.keys(confirmed.reps);
+ return names.find(n=>raw===n)||names.find(n=>raw.startsWith(n)&&/^[ァ-ヶーぁ-ゖ]+$/.test(raw.slice(n.length)))||raw;
+}
 function calculate(){
  if(!parsed||!confirmed){$('#results').hidden=true;status.textContent='営業実績管理表と月次確定ファイルの両方を選んでください。';return;}
- const records=parsed.rows.map(r=>({...r,items:products.map(p=>Number(r.source[p.index])||0)}));
- const cancellations=parsed.cancellations.map(r=>({...r,items:products.map(p=>Number(r.source[p.index-3])||0)}));
+ const records=parsed.rows.map(r=>({...r,rep:canonicalRep(r.rep),items:products.map(p=>Number(r.source[p.index])||0)}));
+ const cancellations=parsed.cancellations.map(r=>({...r,rep:canonicalRep(r.rep),items:products.map(p=>Number(r.source[p.index-3])||0)}));
  const byRep={},byCategory={シェアド:{count:0,sales:0},既存:{count:0,sales:0},店子:{count:0,sales:0},OP:{count:0,sales:0},キャン:{count:0,sales:0},'電話・その他':{count:0,sales:0}};
  const group=p=>[13,14,15,29,30,31,32].includes(p.index)?'シェアド':([10,11,12,25,26,27,28].includes(p.index)?'既存':([16,17,18,34].includes(p.index)?'店子':(p.index>=46?'OP':'電話・その他')));
  for(const p of products){p.count=records.reduce((a,r)=>a+(Number(r.source[p.index])||0),0);p.sales=p.count*p.price;const x=byCategory[group(p)];x.count+=p.count;x.sales+=p.sales;}
- for(const r of records){r.sales=r.items.reduce((a,n,i)=>a+n*products[i].price,0);const x=byRep[r.rep]??{count:0,gross:0,cancelSales:0,fresh:0,cancelFresh:0,op:0};x.count++;x.gross+=r.sales;x.fresh+=Number(r.source[64])||0;x.op+=products.reduce((a,p)=>a+(p.index>=46?(Number(r.source[p.index])||0):0),0);byRep[r.rep]=x;}
+ const unmatched=new Set();
+ for(const r of records){r.sales=r.items.reduce((a,n,i)=>a+n*products[i].price,0);if(!confirmed.reps[r.rep]){unmatched.add(r.rep);continue;}const x=byRep[r.rep]??{count:0,gross:0,cancelSales:0,fresh:0,cancelFresh:0,op:0};x.count++;x.fresh+=Number(r.source[64])||0;x.op+=products.reduce((a,p)=>a+(p.index>=46?(Number(r.source[p.index])||0):0),0);byRep[r.rep]=x;}
  const gross=confirmed.amount.sales+confirmed.amount.cancel,total=confirmed.amount.sales,cancelSales=confirmed.amount.cancel,period=parsed.period;
  for(const [name,actual] of Object.entries(confirmed.reps)){
   const x=byRep[name]??{count:0,gross:0,cancelSales:0,fresh:0,cancelFresh:0,op:0};
@@ -38,9 +45,10 @@ function calculate(){
  if(confirmed.month&&confirmed.month!==Number(period.match(/年(\d+)月/)?.[1]))warnings.push(`営業実績表は${period}、確定ファイル名は${confirmed.month}月です。対象月を確認してください。`);
  if(confirmed.adjustment)warnings.push(`確定ファイルの担当者別売上計と営業区分計の差額 ${yen(confirmed.adjustment)} は担当者に配賦していません。固定費 ${yen(confirmed.amount.fixed)} は営業売上合計に含みます。`);
  if(cancellations.reduce((a,c)=>a+c.fresh,0)!==confirmed.count.cancel)warnings.push('営業実績表のキャンセル真水数と確定ファイルが異なるため、確定ファイルの数字を使用しています。');
+ if(unmatched.size)warnings.push('確定ファイルに紐付かない担当者：'+[...unmatched].join('、')+'。元ファイルの担当名を確認してください。');
  $('#warnings').textContent=warnings.join('　');$('#warnings').hidden=!warnings.length;
  $('#results').hidden=false;status.textContent=`${sourceName} を読み込みました。集計内容を確認してください。`;status.className='notice ok';
- $('#download').disabled=false;
+ $('#download').disabled=unmatched.size>0;
  $('#download').onclick=()=>{const blob=makeWorkbook({period,products,records,cancellations,byRep,byCategory,total,gross,cancelSales,fileName:sourceName,confirmed});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`${period.replace(/[^0-9]/g,'')}_ケーブル売上管理表.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 }
 function column(j){let s='',n=j+1;while(n){s=String.fromCharCode(65+(n-1)%26)+s;n=Math.floor((n-1)/26);}return s;}
