@@ -8,6 +8,7 @@ const files={sales:null,confirmed:null,annual:null};
 const month=$('#month');for(const n of [6,7,8,10,11,12,1,2,3,4,5])month.add(new Option(`${n}月`,n));
 function monthCol(n,base){return String.fromCharCode(base+[6,7,8,9,10,11,12,1,2,3,4,5].indexOf(Number(n)));}
 function value(map,ref){return Number(map[ref])||0;}
+function repName(name){const raw=String(name||'').replace(/\s+/g,'');return ['浅野','小林','西沢','遠藤'].find(n=>raw===n||raw.startsWith(n)&&/^[ァ-ヶーぁ-ゖ]+$/.test(raw.slice(n.length)))||raw;}
 async function loadBook(file){
  const zip=await JSZip.loadAsync(await file.arrayBuffer());
  const book=xml(await zip.file('xl/workbook.xml').async('string'));
@@ -33,8 +34,8 @@ function salesData(s){
  const head=s.cells.get(2)||[];
  if(String(head[1]||'').trim()!=='契約日'||String(head[4]||'').trim()!=='担当'||String(head[5]||'').trim()!=='名前')throw Error('営業実績表の列配置が異なります。');
  const rows=[...s.cells.entries()].filter(([i,r])=>i>=5&&Number.isFinite(r[1])&&r[4]&&r[5]);
- const reps={};for(const [,r] of rows){const k=String(r[4]).trim(),x=reps[k]??={fresh:0,cancel:0};x.fresh+=Number(r[64])||0;}
- for(const [i,r] of s.cancellations)if(i>=5&&Number.isFinite(r[1])&&r[2]&&r[3]){const k=String(r[2]).trim(),x=reps[k]??={fresh:0,cancel:0};x.cancel+=Number(r[61])||0;}
+ const reps={};for(const [,r] of rows){const k=repName(r[4]),x=reps[k]??={fresh:0,cancel:0};x.fresh+=Number(r[64])||0;}
+ for(const [i,r] of s.cancellations)if(i>=5&&Number.isFinite(r[1])&&r[2]&&r[3]){const k=repName(r[2]),x=reps[k]??={fresh:0,cancel:0};x.cancel+=Number(r[61])||0;}
  const serial=rows[0]?.[1]?.[1];if(!serial)throw Error('営業の契約行が見つかりません。');
  const date=new Date(Date.UTC(1899,11,30)+Math.round(serial)*86400000);
  return {reps,rows:rows.length,sourceMonth:date.getUTCMonth()+1};
@@ -88,6 +89,7 @@ async function render(){const status=$('#status');$('#save').disabled=true;$('#r
  $('#maintenance-rows').innerHTML=[['栃木',d.m.tochigi,d.counts.tochigi],['古河',d.m.koga,d.counts.koga]].flatMap(([name,amounts,counts])=>['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${name} ${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`)).join('');
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td></tr>`).join('');
  $('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';
+ if(location.hash==='#maintenance')requestAnimationFrame(()=>$('#maintenance')?.scrollIntoView({block:'start'}));
  $('#save').disabled=false;$('#save').onclick=async()=>{try{status.textContent='Excelファイルを作成中…';$('#save').disabled=true;const blob=await updateAnnual(annual,d,sales,n),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`2026年_${n}月反映.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='保存しました。Excelで開いて数式を再計算してください。';}catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';}}
 for(const key of Object.keys(files))$(`#${key}`).addEventListener('change',e=>{files[key]=e.target.files[0]||null;$(`#${key}-name`).textContent=files[key]?.name||'未選択';render();});month.addEventListener('change',render);
