@@ -92,6 +92,23 @@ function showView(){
  if(!$('#result').hidden)window.scrollTo({top:0,behavior:'auto'});
 }
 const monthlyTarget=4500000;
+function ensureDashboardCharts(){
+ const dashboard=$('#dashboard');
+ if(!dashboard)throw Error('ダッシュボードの表示領域が見つかりません。ページを再読み込みしてください。');
+ if(!$('#this-month-summary')){
+  const summary=document.createElement('div');summary.id='this-month-summary';summary.className='this-month';
+  summary.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:16px 0';
+  const style=document.createElement('style');style.textContent='.this-month>div{background:#fff;border:1px solid #c5d7e5;border-radius:12px;padding:14px}.this-month span{display:block;color:#58758e;font-size:13px}.this-month strong{display:block;color:#111;font-size:20px;margin-top:5px}';dashboard.append(style);
+  (dashboard.querySelector('.progress-layout')||dashboard.firstElementChild).before(summary);
+ }
+ const missing=[['department-chart','営業・メンテの月別売上'],['fresh-chart','営業の月別真水実績'],['pt-chart','メンテの月別PT']].filter(([id])=>!$(`#${id}`));
+ if(missing.length){
+  const stack=document.createElement('div');stack.className='chart-stack';stack.style.cssText='display:grid;gap:16px;margin:16px 0';
+  for(const [id,title] of missing){const card=document.createElement('div');card.className='card';card.innerHTML=`<h3>${title}</h3><div id="${id}"></div>${id==='pt-chart'&&!$('#pt-note')?'<p id="pt-note" class="sub"></p>':''}`;stack.append(card);}
+  (dashboard.querySelector('.progress-layout')||dashboard).after(stack);
+ }
+ if(!$('#pt-note')){const note=document.createElement('p');note.id='pt-note';note.className='sub';$('#pt-chart').after(note);}
+}
 function chartData(annual,d,n){
  const dept=annual.sheets['部署売上']?.map,maint=annual.sheets['メンテ']?.map;
  if(!dept||!maint)throw Error('年間ファイルに「部署売上」「メンテ」がありません。');
@@ -122,6 +139,7 @@ function barChart(data,series,unit){
  return `<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${series.map(s=>s.name).join('・')}の月別縦棒グラフ">${guide}${bars}${labels}</svg><div class="chart-legend">${legend}</div>`;
 }
 function renderProgress(annual,d,n){
+ ensureDashboardCharts();
  const data=chartData(annual,d,n),max=Math.ceil(Math.max(monthlyTarget,...data.map(x=>x.actual||0))*1.15/1000000)*1000000;
  const left=52,right=24,top=22,bottom=42,width=700,height=310;
  const x=i=>left+i*(width-left-right)/11,y=v=>height-bottom-v/max*(height-top-bottom);
