@@ -1,1 +1,45 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PKONE 月末実績</title><link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="../sidebar.css"><style>.inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.input-card{background:white;border:2px dashed #9bb8cf;border-radius:14px;padding:20px;min-height:150px}.input-card strong{display:block;margin-bottom:12px}.input-card input{width:100%}.input-card p{font-size:13px;color:#58758e}.toolbar{display:flex;gap:14px;align-items:center;margin:20px 0}.toolbar select{font:inherit;padding:11px;border:1px solid #b9cddd;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid .stat strong{font-size:28px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:16px}.ok{color:#176956}.error{color:#b02538}.sub{font-size:14px;color:#58758e;line-height:1.7}@media(max-width:850px){.inputs,.grid,.cards{grid-template-columns:1fr}.toolbar{flex-wrap:wrap}}</style></head><body><main class="shell"><header><div class="brand"><span class="mark">NSL</span><span>PKONE 月末実績</span></div><nav><a href="../">営業の詳細売上表</a>　<a href="../price-master/">単価マスター</a></nav></header><section class="workspace" style="display:block;padding:36px 0 20px"><p class="eyebrow">SALES & MAINTENANCE</p><h1>3つのファイルを入れて、月末集計</h1><p class="sub">営業の実績表、営業・メンテの確定表、年間管理表を選びます。計算はこの端末内で行います。</p></section><div class="inputs"><label class="input-card"><strong>① 営業実績管理表 (.xls)</strong><input id="sales" type="file" accept=".xls"><p id="sales-name">未選択</p></label><label class="input-card"><strong>② 月次確定ファイル (.xlsx)</strong><input id="confirmed" type="file" accept=".xlsx"><p id="confirmed-name">未選択</p></label><label class="input-card"><strong>③ 2026年ファイル (.xlsx)</strong><input id="annual" type="file" accept=".xlsx"><p id="annual-name">未選択</p></label></div><div class="toolbar"><label>反映する月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>更新した2026年ファイルを保存</button></div><p id="status" class="notice" role="status">ファイルを選ぶと、実績と売上の照合結果が表示されます。</p><section id="result" hidden><div id="warning" class="warning" hidden></div><div class="grid"><div class="stat"><span>確定売上</span><strong id="total"></strong></div><div class="stat"><span>営業売上</span><strong id="sales-total"></strong></div><div class="stat"><span>メンテ売上</span><strong id="maintenance-total"></strong></div></div><div class="cards"><div class="card"><h3>営業実績</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数</th><th>確定売上</th></tr></thead><tbody id="sales-rows"></tbody></table></div></div><div class="card" id="maintenance"><h3>メンテ実績</h3><div class="scroll"><table><thead><tr><th>拠点・区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="maintenance-rows"></tbody></table></div></div></div><p class="sub">営業担当の戸建真水は営業実績管理表から、キャンセル真水・キャンセル売上は確定ファイルから読み込みます。保存した2026年ファイルをExcelで開くと、既存の数式が再計算されます。</p><div class="card"><h3>担当者別件数</h3><div class="scroll"><table><thead><tr><th>担当</th><th>実績</th><th>戸建真水</th><th>キャンセル真水</th></tr></thead><tbody id="reps"></tbody></table></div></div></section></main><script src="./jszip.min.js"></script><script type="module" src="./app.js"></script><script src="../sidebar.js"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PKONE 月末実績</title>
+  <link rel="stylesheet" href="../style.css"><link rel="stylesheet" href="../sidebar.css">
+  <style>
+    .inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.input-card{background:#fff;border:2px dashed #9bb8cf;border-radius:14px;padding:20px;min-height:150px}.input-card strong{display:block;margin-bottom:12px}.input-card input{width:100%}.input-card p{font-size:13px;color:#58758e}
+    .toolbar{display:flex;gap:14px;align-items:center;margin:20px 0;flex-wrap:wrap}.toolbar select{font:inherit;padding:11px;border:1px solid #b9cddd;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid .stat strong{font-size:clamp(22px,2.4vw,30px)}.sub{font-size:14px;color:#58758e;line-height:1.7}.view{margin-top:18px}[hidden]{display:none!important}.view h2{margin:8px 0 18px}
+    .progress-layout{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin:18px 0}.progress-layout .card{min-width:0}.progress-list{display:grid;gap:13px}.progress-row{display:grid;grid-template-columns:55px 1fr 180px;align-items:center;gap:10px;font-size:14px}.progress-row strong{text-align:right;font-size:12px}.track{height:14px;border-radius:20px;background:#dce7ef;overflow:hidden}.track span{display:block;height:100%;background:#2876a7;border-radius:20px;max-width:100%}.track span.over{background:#1b9b70}.progress-card{margin:14px 0}.progress-card .line{display:flex;justify-content:space-between;gap:12px;margin:10px 0}.progress-card .line strong{font-size:18px}.progress-card .track{height:18px}.progress-card small{color:#678198}.kpi-grid{margin:15px 0}.kpi-grid .stat:nth-child(3){background:#1e806d}
+    @media(max-width:850px){.inputs,.grid,.progress-layout{grid-template-columns:1fr}.toolbar{align-items:stretch}.toolbar .primary{width:100%}.progress-row{grid-template-columns:45px 1fr 126px;font-size:12px}.progress-row strong{font-size:10px}}
+  </style>
+</head>
+<body><main class="shell">
+  <header><div class="brand"><span class="mark">NSL</span><span>PKONE 月末実績</span></div></header>
+  <section class="workspace" style="display:block;padding:36px 0 20px"><p class="eyebrow">SALES & MAINTENANCE</p><h1>3つのファイルを入れて、月末集計</h1><p class="sub">一度読み込むと、目次のダッシュボード・営業・メンテに同じデータが反映されます。ファイルはこの画面の中で処理します。</p></section>
+  <section id="import-panel"><div class="inputs">
+    <label class="input-card"><strong>① 営業実績管理表 (.xls)</strong><input id="sales" type="file" accept=".xls"><p id="sales-name">未選択</p></label>
+    <label class="input-card"><strong>② 月次確定ファイル (.xlsx)</strong><input id="confirmed" type="file" accept=".xlsx"><p id="confirmed-name">未選択</p></label>
+    <label class="input-card"><strong>③ 2026年ファイル (.xlsx)</strong><input id="annual" type="file" accept=".xlsx"><p id="annual-name">未選択</p></label>
+  </div>
+  <div class="toolbar"><label>反映する月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>更新した2026年ファイルを保存</button></div></section>
+  <p id="status" class="notice" role="status">3つのファイルを選んでください。</p>
+  <p id="empty-view" class="card" hidden>まず<a href="#dashboard">ダッシュボード</a>で3つのファイルを読み込んでください。営業とメンテには自動反映されます。</p>
+  <section id="result" hidden>
+    <div id="warning" class="warning" hidden></div>
+    <section id="dashboard" class="view">
+      <h2>ダッシュボード</h2>
+      <div class="grid kpi-grid"><div class="stat"><span>選択月の確定売上</span><strong id="total"></strong></div><div class="stat"><span>営業売上</span><strong id="sales-total"></strong></div><div class="stat"><span>メンテ売上</span><strong id="maintenance-total"></strong></div></div>
+      <div class="progress-layout"><div class="card"><h3>月別進捗（6月〜翌5月）</h3><div id="monthly-progress" class="progress-list"></div></div><div class="card"><h3>上期・下期・年間</h3><div id="period-progress"></div></div></div>
+      <p class="sub">進捗率は実績売上 ÷ 計画売上です。選択月は確定ファイルの金額に置き換え、他の月は2026年ファイルの保存済み実績を使用します。未到来の月は実績に含めません。</p>
+    </section>
+    <section id="sales-view" class="view" hidden>
+      <h2>営業実績</h2>
+      <div class="grid kpi-grid"><div class="stat"><span>営業の合計売上</span><strong id="sales-kpi"></strong></div><div class="stat"><span>シェアド合計件数</span><strong id="shared-kpi"></strong></div><div class="stat"><span>既存合計件数</span><strong id="existing-kpi"></strong></div></div>
+      <div class="card"><h3>売上区分</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数</th><th>確定売上</th></tr></thead><tbody id="sales-rows"></tbody></table></div></div>
+      <div class="card" style="margin-top:16px"><h3>担当者別</h3><div class="scroll"><table><thead><tr><th>担当</th><th>確定表の担当売上</th><th>実績</th><th>戸建真水</th><th>キャンセル真水</th><th>OP件数</th></tr></thead><tbody id="reps"></tbody></table></div><p class="sub">担当売上は確定表の担当別元売上から、その担当のキャンセル売上を控除しています。固定費と未配賦の差額は担当者別に含めません。</p></div>
+    </section>
+    <section id="maintenance" class="view" hidden>
+      <h2>メンテ実績</h2><div class="grid kpi-grid"><div class="stat"><span>メンテの合計売上</span><strong id="maintenance-kpi"></strong></div><div class="stat"><span>栃木</span><strong id="tochigi-kpi"></strong></div><div class="stat"><span>古河</span><strong id="koga-kpi"></strong></div></div>
+      <div class="card"><h3>拠点・区分別</h3><div class="scroll"><table><thead><tr><th>拠点・区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="maintenance-rows"></tbody></table></div></div>
+    </section>
+    <p class="sub">営業の戸建真水は営業実績管理表から、キャンセル真水と売上・メンテ売上は確定ファイルから読み込みます。保存した年間ファイルはExcelで開くと数式が再計算されます。</p>
+  </section>
+</main><script src="./jszip.min.js"></script><script src="../sidebar.js"></script><script type="module" src="./app.js"></script></body></html>
