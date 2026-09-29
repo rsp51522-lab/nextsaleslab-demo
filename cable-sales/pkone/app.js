@@ -203,7 +203,10 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  $('#maintenance-kpi').textContent=yen(d.m.total);$('#tochigi-kpi').textContent=yen(d.m.tochigi.reduce((a,b)=>a+b,0));$('#koga-kpi').textContent=yen(d.m.koga.reduce((a,b)=>a+b,0));
  renderProgress(annual,d,n);
  $('#sales-rows').innerHTML=[['シェアド',d.counts.shared,d.sales.shared],['既存',d.counts.existing,d.sales.existing],['店子',d.counts.tenant,d.sales.tenant],['OP',d.counts.op,d.sales.op],['固定費',0,d.sales.fixed],['キャンセル控除',d.counts.cancel,-d.sales.cancel]].map(([name,count,amount])=>`<tr${name==='キャンセル控除'?' class="cancel-row"':''}><th>${name}</th><td>${count}</td><td>${yen(amount)}</td></tr>`).join('');
- $('#maintenance-rows').innerHTML=[['栃木',d.m.tochigi,d.counts.tochigi],['古河',d.m.koga,d.counts.koga]].flatMap(([name,amounts,counts])=>['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${name} ${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`)).join('');
+ const oldMaintenance=$('#maintenance-rows');
+ if(oldMaintenance)oldMaintenance.closest('.card').outerHTML='<div class="maintenance-details"><div class="card"><h3>栃木</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="tochigi-rows"></tbody></table></div></div><div class="card"><h3>古河</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="koga-rows"></tbody></table></div></div></div>';
+ for(const [place,amounts,counts] of [['tochigi',d.m.tochigi,d.counts.tochigi],['koga',d.m.koga,d.counts.koga]])
+  $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`).join('');
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
  $('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';showView();
  $('#save').disabled=false;$('#save').onclick=async()=>{try{
