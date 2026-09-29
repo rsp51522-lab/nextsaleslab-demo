@@ -45,7 +45,11 @@ function confirmedData(book){const s=book.sheets['実績']?.map;if(!s)throw Erro
  const m={tochigi:[g('E48'),g('E49'),g('E50'),g('E51')],koga:[g('F48'),g('F49'),g('F50'),g('F51')],total:g('D14')};
  const counts={result:g('G26'),gain:g('G28'),cancel:g('G35'),shared:g('G30'),existing:g('G31'),tenant:g('G32'),op:g('G33'),tochigi:[g('H48'),g('H49'),g('H50'),g('H51')],koga:[g('I48'),g('I49'),g('I50'),g('I51')]};
  if(!sales.total||!m.total||Math.abs(sales.shared+sales.existing+sales.tenant+sales.op+sales.fixed-sales.cancel-sales.total)>1||Math.abs([...m.tochigi,...m.koga].reduce((a,b)=>a+b,0)-m.total)>1)throw Error('確定ファイルの営業・メンテ内訳が合計と一致しません。');
- return {sales,m,counts,overall:g('D9')};
+ const cancelSheet=book.sheets['栃木キャン']?.map,pk=book.sheets['栃木PK']?.map;
+ if(!cancelSheet||!pk||value(cancelSheet,'H66')!==sales.cancel)throw Error('確定ファイルの栃木キャンと実績の金額が一致しません。');
+ const repCancel={};for(let r=61;r<=64;r++)if(cancelSheet[`B${r}`])repCancel[cancelSheet[`B${r}`]]={fresh:value(cancelSheet,`G${r}`),sales:value(cancelSheet,`H${r}`)};
+ if(Object.values(repCancel).reduce((a,x)=>a+x.sales,0)!==sales.cancel)throw Error('キャンセル担当別の合計が一致しません。');
+ return {sales,m,counts,overall:g('D9'),repCancel};
 }
 function setCell(sheet,ref,n){
  const doc=sheet.doc,data=doc.getElementsByTagNameNS(ns,'sheetData')[0];if(!data)throw Error('Excelのシート構造を読み取れません。');
@@ -63,7 +67,7 @@ async function updateAnnual(book,d,s,n){
  for(const [r,k] of [[40,'shared'],[41,'existing'],[42,'tenant'],[43,'op'],[44,'fixed'],[45,'cancel']])put(r,d.sales[k]);
  [d.m.tochigi,d.m.koga].forEach((list,i)=>list.forEach((v,j)=>put((i?59:53)+j,v)));
  for(const [r,v] of [[75,d.counts.result],[76,d.counts.gain],[77,d.counts.cancel],[78,d.counts.shared+d.counts.existing+d.counts.tenant],[79,d.counts.shared],[80,d.counts.existing],[81,d.counts.tenant],[82,d.counts.op],...[85,86,87,88].map((r,i)=>[r,d.counts.tochigi[i]]),...[90,91,92,93].map((r,i)=>[r,d.counts.koga[i]])])put(r,v);
- const reps=['浅野','小林','西沢','遠藤'];reps.forEach((name,i)=>{const x=s.reps[name]||{fresh:0,cancel:0};setCell(sales,`${sc}${13+i}`,x.fresh);setCell(sales,`${sc}${21+i}`,x.cancel);});
+ const reps=['浅野','小林','西沢','遠藤'];reps.forEach((name,i)=>{const x=s.reps[name]||{fresh:0,cancel:0};setCell(sales,`${sc}${13+i}`,x.fresh);setCell(sales,`${sc}${21+i}`,d.repCancel[name]?.fresh||0);});
  // Formula cells and unrelated months stay intact. Excel refreshes dependent cached values on open.
  let calc=book.book.getElementsByTagNameNS(ns,'calcPr')[0];if(!calc){calc=book.book.createElementNS(ns,'calcPr');book.book.documentElement.appendChild(calc);}calc.setAttribute('fullCalcOnLoad','1');calc.setAttribute('forceFullCalc','1');calc.setAttribute('calcMode','auto');
  book.zip.file('xl/workbook.xml',serialize(book.book));
@@ -82,7 +86,7 @@ async function render(){const status=$('#status');$('#save').disabled=true;$('#r
  $('#total').textContent=yen(d.overall);$('#sales-total').textContent=yen(d.sales.total);$('#maintenance-total').textContent=yen(d.m.total);
  $('#sales-rows').innerHTML=[['シェアド',d.counts.shared,d.sales.shared],['既存',d.counts.existing,d.sales.existing],['店子',d.counts.tenant,d.sales.tenant],['OP',d.counts.op,d.sales.op],['固定費',0,d.sales.fixed],['キャンセル控除',d.counts.cancel,-d.sales.cancel]].map(([name,count,amount])=>`<tr><th>${name}</th><td>${count}</td><td>${yen(amount)}</td></tr>`).join('');
  $('#maintenance-rows').innerHTML=[['栃木',d.m.tochigi,d.counts.tochigi],['古河',d.m.koga,d.counts.koga]].flatMap(([name,amounts,counts])=>['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${name} ${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`)).join('');
- $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${x.fresh-x.cancel}</td><td>${x.fresh}</td><td>${x.cancel}</td></tr>`).join('');
+ $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td></tr>`).join('');
  $('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';
  $('#save').disabled=false;$('#save').onclick=async()=>{try{status.textContent='Excelファイルを作成中…';$('#save').disabled=true;const blob=await updateAnnual(annual,d,sales,n),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`2026年_${n}月反映.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='保存しました。Excelで開いて数式を再計算してください。';}catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';}}
