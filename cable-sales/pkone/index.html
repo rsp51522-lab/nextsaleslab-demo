@@ -7,28 +7,28 @@
   <style>
     .inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.input-card{background:#fff;border:2px dashed #9bb8cf;border-radius:14px;padding:20px;min-height:150px}.input-card strong{display:block;margin-bottom:12px}.input-card input{width:100%}.input-card p{font-size:13px;color:#58758e}
     .toolbar{display:flex;gap:14px;align-items:center;margin:20px 0;flex-wrap:wrap}.toolbar select{font:inherit;padding:11px;border:1px solid #b9cddd;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid .stat strong{font-size:clamp(22px,2.4vw,30px)}.sub{font-size:14px;color:#58758e;line-height:1.7}.view{margin-top:18px}[hidden]{display:none!important}.view h2{margin:8px 0 18px}
-    .progress-layout{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin:18px 0}.progress-layout .card{min-width:0}.progress-list{display:grid;gap:13px}.progress-row{display:grid;grid-template-columns:55px 1fr 180px;align-items:center;gap:10px;font-size:14px}.progress-row strong{text-align:right;font-size:12px}.track{height:14px;border-radius:20px;background:#dce7ef;overflow:hidden}.track span{display:block;height:100%;background:#2876a7;border-radius:20px;max-width:100%}.track span.over{background:#1b9b70}.progress-card{margin:14px 0}.progress-card .line{display:flex;justify-content:space-between;gap:12px;margin:10px 0}.progress-card .line strong{font-size:18px}.progress-card .track{height:18px}.progress-card small{color:#678198}.kpi-grid{margin:15px 0}.kpi-grid .stat:nth-child(3){background:#1e806d}
-    @media(max-width:850px){.inputs,.grid,.progress-layout{grid-template-columns:1fr}.toolbar{align-items:stretch}.toolbar .primary{width:100%}.progress-row{grid-template-columns:45px 1fr 126px;font-size:12px}.progress-row strong{font-size:10px}}
+    .progress-layout{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin:18px 0}.progress-layout .card{min-width:0}.line-chart{width:100%;height:auto;display:block}.chart-legend{display:flex;gap:18px;font-size:13px;color:#42627d;margin-top:8px}.chart-legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}.progress-card{margin:14px 0;padding:10px 0;border-bottom:1px solid #dce7ef}.progress-card .line{display:flex;justify-content:space-between;gap:12px;margin:10px 0}.progress-card .line strong{font-size:18px}.progress-card small{color:#678198}.kpi-grid{margin:15px 0}.kpi-grid .stat:nth-child(3){background:#1e806d}
+    @media(max-width:850px){.inputs,.grid,.progress-layout{grid-template-columns:1fr}.toolbar{align-items:stretch}.toolbar .primary{width:100%}}
   </style>
 </head>
 <body><main class="shell">
   <header><div class="brand"><span class="mark">NSL</span><span>PKONE 月末実績</span></div></header>
-  <section class="workspace" style="display:block;padding:36px 0 20px"><p class="eyebrow">SALES & MAINTENANCE</p><h1>3つのファイルを入れて、月末集計</h1><p class="sub">一度読み込むと、目次のダッシュボード・営業・メンテに同じデータが反映されます。ファイルはこの画面の中で処理します。</p></section>
+  <section class="workspace" style="display:block;padding:36px 0 20px"><p class="eyebrow">SALES & MAINTENANCE</p><h1>月末実績を年度ごとに保管</h1><p class="sub">読み込んだファイルはこのブラウザに年度・月ごとに保存します。目次の移動や再読み込み後も復元され、新しいファイルを選ぶと同じ月の内容を更新します。</p></section>
   <section id="import-panel"><div class="inputs">
     <label class="input-card"><strong>① 営業実績管理表 (.xls)</strong><input id="sales" type="file" accept=".xls"><p id="sales-name">未選択</p></label>
     <label class="input-card"><strong>② 月次確定ファイル (.xlsx)</strong><input id="confirmed" type="file" accept=".xlsx"><p id="confirmed-name">未選択</p></label>
-    <label class="input-card"><strong>③ 2026年ファイル (.xlsx)</strong><input id="annual" type="file" accept=".xlsx"><p id="annual-name">未選択</p></label>
+    <label class="input-card"><strong>③ 年間ファイル (.xlsx) ／年度共通</strong><input id="annual" type="file" accept=".xlsx"><p id="annual-name">未選択</p></label>
   </div>
-  <div class="toolbar"><label>反映する月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>更新した2026年ファイルを保存</button></div></section>
+  <div class="toolbar"><label>年度（6月〜翌5月） <select id="year"></select></label><label>表示・反映する月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>保存済みの月を年間ファイルに反映してダウンロード</button></div><p class="sub">営業実績表と月次確定ファイルは月ごと、年間ファイルは年度ごとに保管します。同じ月に新しいファイルを選ぶと差し替わります。保存先は現在のブラウザ内です。</p></section>
   <p id="status" class="notice" role="status">3つのファイルを選んでください。</p>
-  <p id="empty-view" class="card" hidden>まず<a href="#dashboard">ダッシュボード</a>で3つのファイルを読み込んでください。営業とメンテには自動反映されます。</p>
+  <p id="empty-view" class="card" hidden>この月のデータがありません。<a href="#dashboard">ダッシュボード</a>でファイルを読み込んでください。営業とメンテには自動反映されます。</p>
   <section id="result" hidden>
     <div id="warning" class="warning" hidden></div>
     <section id="dashboard" class="view">
       <h2>ダッシュボード</h2>
       <div class="grid kpi-grid"><div class="stat"><span>選択月の確定売上</span><strong id="total"></strong></div><div class="stat"><span>営業売上</span><strong id="sales-total"></strong></div><div class="stat"><span>メンテ売上</span><strong id="maintenance-total"></strong></div></div>
-      <div class="progress-layout"><div class="card"><h3>月別進捗（6月〜翌5月）</h3><div id="monthly-progress" class="progress-list"></div></div><div class="card"><h3>上期・下期・年間</h3><div id="period-progress"></div></div></div>
-      <p class="sub">進捗率は実績売上 ÷ 計画売上です。選択月は確定ファイルの金額に置き換え、他の月は2026年ファイルの保存済み実績を使用します。未到来の月は実績に含めません。</p>
+      <div class="progress-layout"><div class="card"><h3>月別売上（6月〜翌5月）</h3><div id="monthly-progress"></div></div><div class="card"><h3>上期・下期・年間</h3><div id="period-progress"></div></div></div>
+      <p class="sub">全体の月間目標は450万円です。上期は6〜11月、下期は12〜5月です。実績はこのブラウザに入力済みの月だけ表示し、未入力月は折れ線をつなぎません。進捗率は期間実績 ÷ 期間目標です。</p>
     </section>
     <section id="sales-view" class="view" hidden>
       <h2>営業実績</h2>
