@@ -92,9 +92,37 @@ function showView(){
  if(!$('#result').hidden)window.scrollTo({top:0,behavior:'auto'});
 }
 const monthlyTarget=4500000;
-function renderProgress(_annual,_d,_n){
- const data=fiscalMonths.map(m=>({month:m,target:monthlyTarget,actual:storedSummaries[m]?.overall??null}));
- const max=Math.ceil(Math.max(monthlyTarget,...data.map(x=>x.actual||0))*1.15/1000000)*1000000;
+function chartData(annual,d,n){
+ const dept=annual.sheets['部署売上']?.map,maint=annual.sheets['メンテ']?.map;
+ if(!dept||!maint)throw Error('年間ファイルに「部署売上」「メンテ」がありません。');
+ return fiscalMonths.map(m=>{
+  const col=monthCol(m,69),mc=monthCol(m,68),summary=storedSummaries[m];
+  const total=value(dept,`${col}14`),sales=value(dept,`${col}15`),maintenance=value(dept,`${col}16`);
+  const annualPt=value(maint,`${mc}14`),entered=total>0||sales>0||maintenance>0||annualPt>0||Boolean(summary);
+  const selected=m===n;
+  return {month:m,actual:entered?(selected?d.overall:summary?.overall??total):null,
+   sales:entered?(selected?d.sales.total:summary?.sales??sales):null,
+   maintenance:entered?(selected?d.m.total:summary?.maintenance??maintenance):null,
+   fresh:entered?(selected?d.counts.result:summary?.fresh??value(dept,`${col}75`)):null,
+   pt:entered?(annualPt||((selected?d.m.total:summary?.maintenance??maintenance)/4000)):null,
+   estimatedPt:entered&&!annualPt&&Boolean(selected?d.m.total:summary?.maintenance??maintenance)};
+ });
+}
+function barChart(data,series,unit){
+ const width=900,height=290,left=55,right=24,top=28,bottom=42;
+ const maxValue=Math.max(1,...data.flatMap(item=>series.map(s=>item[s.key]||0)));
+ const max=Math.ceil(maxValue*1.15/(unit==='円'?1000000:20))*(unit==='円'?1000000:20);
+ const x=i=>left+i*(width-left-right)/12+(width-left-right)/24;
+ const y=v=>height-bottom-v/max*(height-top-bottom),group=(width-left-right)/12,bar=Math.min(23,(group-10)/series.length);
+ const format=v=>unit==='円'?`${Math.round(v/10000)}万`:Number(v.toFixed(1)).toLocaleString('ja-JP');
+ const guide=[0,max/2,max].map(v=>`<line x1="${left}" y1="${y(v)}" x2="${width-right}" y2="${y(v)}" stroke="#dce7ef"/><text x="${left-7}" y="${y(v)+4}" text-anchor="end" fill="#58758e" font-size="11">${format(v)}</text>`).join('');
+ const bars=data.flatMap((item,i)=>series.map((s,j)=>{const v=item[s.key];if(v===null)return '';const bx=x(i)+(j-(series.length-1)/2)*bar,by=y(v),h=Math.max(0,height-bottom-by);return `<rect x="${bx-bar/2}" y="${by}" width="${bar-2}" height="${h}" rx="3" fill="${s.color}"><title>${item.month}月 ${s.name} ${unit==='円'?yen(v):format(v)+unit}</title></rect>`;})).join('');
+ const labels=data.map((item,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="13">${item.month}月</text>`).join('');
+ const legend=series.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('');
+ return `<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${series.map(s=>s.name).join('・')}の月別縦棒グラフ">${guide}${bars}${labels}</svg><div class="chart-legend">${legend}</div>`;
+}
+function renderProgress(annual,d,n){
+ const data=chartData(annual,d,n),max=Math.ceil(Math.max(monthlyTarget,...data.map(x=>x.actual||0))*1.15/1000000)*1000000;
  const left=52,right=24,top=22,bottom=42,width=700,height=310;
  const x=i=>left+i*(width-left-right)/11,y=v=>height-bottom-v/max*(height-top-bottom);
  const targetLine=`${x(0)},${y(monthlyTarget)} ${x(11)},${y(monthlyTarget)}`;
@@ -103,14 +131,20 @@ function renderProgress(_annual,_d,_n){
   if(data[i].actual===null){if(current.length)segments.push(current);current=[];}
   else current.push(`${x(i)},${y(data[i].actual)}`);
  }if(current.length)segments.push(current);
- const axis=[0,monthlyTarget,Math.ceil(max/1000000)*1000000].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line x1="${left}" y1="${y(v)}" x2="${width-right}" y2="${y(v)}" stroke="#dce7ef"/><text x="${left-7}" y="${y(v)+4}" text-anchor="end" fill="#58758e" font-size="11">${(v/10000).toLocaleString('ja-JP')}万</text>`).join('');
- $('#monthly-progress').innerHTML=`<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月別売上の折れ線グラフ。目標は毎月450万円。実績は入力済みの月だけ表示。">
+ const axis=[0,monthlyTarget,max].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line x1="${left}" y1="${y(v)}" x2="${width-right}" y2="${y(v)}" stroke="#dce7ef"/><text x="${left-7}" y="${y(v)+4}" text-anchor="end" fill="#58758e" font-size="11">${(v/10000).toLocaleString('ja-JP')}万</text>`).join('');
+ $('#monthly-progress').innerHTML=`<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月別の全体売上の折れ線グラフ。目標は毎月450万円。年間ファイルの入力済み月を表示。">
  ${axis}<polyline points="${targetLine}" fill="none" stroke="#e0445b" stroke-width="3" stroke-dasharray="8 5"/>
  ${segments.map(points=>points.includes(' ')?`<polyline points="${points}" fill="none" stroke="#2876a7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:'').join('')}
- ${data.map((v,i)=>v.actual===null?'':`<circle cx="${x(i)}" cy="${y(v.actual)}" r="5" fill="#2876a7"><title>${v.month}月 実績 ${yen(v.actual)}</title></circle>`).join('')}
- ${data.map((v,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="12">${v.month}月</text>`).join('')}</svg><div class="chart-legend"><span><i style="background:#e0445b"></i>目標 450万円／月</span><span><i style="background:#2876a7"></i>入力済み実績</span></div>`;
+ ${data.map((v,i)=>v.actual===null?'':`<circle cx="${x(i)}" cy="${y(v.actual)}" r="5" fill="#2876a7"><title>${v.month}月 全体売上 ${yen(v.actual)}</title></circle>`).join('')}
+ ${data.map((v,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="12">${v.month}月</text>`).join('')}</svg><div class="chart-legend"><span><i style="background:#e0445b"></i>目標 450万円／月</span><span><i style="background:#2876a7"></i>全体売上</span></div>`;
  const periods=[['上期（6〜11月）',data.slice(0,6)],['下期（12〜5月）',data.slice(6)],['年間（6〜5月）',data]];
  $('#period-progress').innerHTML=periods.map(([label,items])=>{const actual=items.reduce((sum,v)=>sum+(v.actual||0),0),target=items.length*monthlyTarget,count=items.filter(v=>v.actual!==null).length;return `<div class="progress-card"><strong>${label}</strong><div class="line"><span>入力済み ${count}/${items.length}か月<br>実績 ${yen(actual)}</span><strong>${Math.round(actual/target*100)}%</strong></div><small>期間目標 ${yen(target)}</small></div>`;}).join('');
+ $('#department-chart').innerHTML=barChart(data,[{key:'sales',name:'営業',color:'#2876a7'},{key:'maintenance',name:'メンテ',color:'#1e806d'}],'円');
+ $('#fresh-chart').innerHTML=barChart(data,[{key:'fresh',name:'戸建真水実績',color:'#2876a7'}],'件');
+ $('#pt-chart').innerHTML=barChart(data,[{key:'pt',name:'メンテPT',color:'#1e806d'}],'PT');
+ $('#pt-note').textContent=data.some(x=>x.estimatedPt)?'※ 年間ファイルにPT未入力の月は、確定したメンテ売上 ÷ 4,000円で換算しています。':'';
+ const now=data.find(x=>x.month===n),diff=(now?.actual||0)-monthlyTarget;
+ $('#this-month-summary').innerHTML=[['目標達成率',`${Math.round((now?.actual||0)/monthlyTarget*100)}%`],['目標との差額',`${diff>=0?'+':''}${yen(diff)}`],['営業真水実績',`${now?.fresh??0}件`],['メンテPT',`${Number((now?.pt??0).toFixed(1))} PT`]].map(([label,val])=>`<div><span>${n}月 ${label}</span><strong>${val}</strong></div>`).join('');
 }
 async function updateAnnual(book,d,s,n){
  const annual=book.sheets['部署売上'],sales=book.sheets['営業'];if(!annual||!sales||!book.sheets['メンテ'])throw Error('2026年ファイルに「部署売上」「営業」「メンテ」が揃っていません。');
@@ -131,7 +165,8 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  status.textContent='読み込み中…';const n=Number(month.value),sales=salesData(parseXls(await files.sales.arrayBuffer()));
  const [confirmed,annual]=await Promise.all([loadBook(files.confirmed),loadBook(files.annual)]);
  const d=confirmedData(confirmed);if(id!==revision)return;
- await writeItem(storageKey('summary'),{overall:d.overall});storedSummaries[n]={overall:d.overall};
+ const summary={overall:d.overall,sales:d.sales.total,maintenance:d.m.total,fresh:d.counts.result};
+ await writeItem(storageKey('summary'),summary);storedSummaries[n]=summary;
  const warnings=[];if(sales.sourceMonth!==n)warnings.push(`営業実績表は${sales.sourceMonth}月の契約日です。反映先は${n}月です。`);
  const unallocated=d.sales.shared+d.sales.existing+d.sales.tenant+d.sales.op-Object.values(d.repSales).reduce((a,b)=>a+b,0);
  if(unallocated)warnings.push(`担当者別元売上と営業区分売上の差額 ${yen(unallocated)} は担当者に配賦していません。固定費も担当者別には含めません。`);
