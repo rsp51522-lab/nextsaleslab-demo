@@ -101,7 +101,9 @@ function ensureDashboardCharts(){
   const style=document.createElement('style');style.textContent='.this-month>div{background:#fff;border:1px solid #c5d7e5;border-radius:12px;padding:14px}.this-month span{display:block;color:#58758e;font-size:13px}.this-month strong{display:block;color:#111;font-size:20px;margin-top:5px}';dashboard.append(style);
   (dashboard.querySelector('.progress-layout')||dashboard.firstElementChild).before(summary);
  }
- const missing=[['department-chart','営業・メンテの月別売上'],['fresh-chart','営業の月別真水実績'],['pt-chart','メンテの月別PT']].filter(([id])=>!$(`#${id}`));
+ const oldDepartment=$('#department-chart');if(oldDepartment)oldDepartment.closest('.card')?.remove();
+ const heading=$('#monthly-progress')?.closest('.card')?.querySelector('h3');if(heading)heading.textContent='全体売上・営業・メンテの月別推移';
+ const missing=[['fresh-chart','営業の月別真水実績'],['pt-chart','メンテの月別PT']].filter(([id])=>!$(`#${id}`));
  if(missing.length){
   const stack=document.createElement('div');stack.className='chart-stack';stack.style.cssText='display:grid;gap:16px;margin:16px 0';
   for(const [id,title] of missing){const card=document.createElement('div');card.className='card';card.innerHTML=`<h3>${title}</h3><div id="${id}"></div>${id==='pt-chart'&&!$('#pt-note')?'<p id="pt-note" class="sub"></p>':''}`;stack.append(card);}
@@ -140,24 +142,29 @@ function barChart(data,series,unit){
 }
 function renderProgress(annual,d,n){
  ensureDashboardCharts();
- const data=chartData(annual,d,n),max=Math.ceil(Math.max(monthlyTarget,...data.map(x=>x.actual||0))*1.15/1000000)*1000000;
+ const data=chartData(annual,d,n);
+ const max=Math.ceil(Math.max(monthlyTarget,...data.map(v=>Math.max(v.actual||0,(v.sales||0)+(v.maintenance||0))))*1.15/1000000)*1000000;
  const left=52,right=24,top=22,bottom=42,width=700,height=310;
  const x=i=>left+i*(width-left-right)/11,y=v=>height-bottom-v/max*(height-top-bottom);
- const targetLine=`${x(0)},${y(monthlyTarget)} ${x(11)},${y(monthlyTarget)}`;
  const segments=[];let current=[];
  for(let i=0;i<data.length;i++){
   if(data[i].actual===null){if(current.length)segments.push(current);current=[];}
   else current.push(`${x(i)},${y(data[i].actual)}`);
  }if(current.length)segments.push(current);
  const axis=[0,monthlyTarget,max].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line x1="${left}" y1="${y(v)}" x2="${width-right}" y2="${y(v)}" stroke="#dce7ef"/><text x="${left-7}" y="${y(v)+4}" text-anchor="end" fill="#58758e" font-size="11">${(v/10000).toLocaleString('ja-JP')}万</text>`).join('');
- $('#monthly-progress').innerHTML=`<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月別の全体売上の折れ線グラフ。目標は毎月450万円。年間ファイルの入力済み月を表示。">
- ${axis}<polyline points="${targetLine}" fill="none" stroke="#e0445b" stroke-width="3" stroke-dasharray="8 5"/>
- ${segments.map(points=>points.includes(' ')?`<polyline points="${points}" fill="none" stroke="#2876a7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:'').join('')}
- ${data.map((v,i)=>v.actual===null?'':`<circle cx="${x(i)}" cy="${y(v.actual)}" r="5" fill="#2876a7"><title>${v.month}月 全体売上 ${yen(v.actual)}</title></circle>`).join('')}
- ${data.map((v,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="12">${v.month}月</text>`).join('')}</svg><div class="chart-legend"><span><i style="background:#e0445b"></i>目標 450万円／月</span><span><i style="background:#2876a7"></i>全体売上</span></div>`;
+ const bars=data.map((v,i)=>{
+  if(v.actual===null)return '';
+  const sales=v.sales||0,maintenance=v.maintenance||0,bx=x(i)-14,base=y(0);
+  return `${sales?`<rect x="${bx}" y="${y(sales)}" width="28" height="${base-y(sales)}" fill="#2876a7"><title>${v.month}月 営業 ${yen(sales)}</title></rect>`:''}${maintenance?`<rect x="${bx}" y="${y(sales+maintenance)}" width="28" height="${y(sales)-y(sales+maintenance)}" fill="#1e806d"><title>${v.month}月 メンテ ${yen(maintenance)}</title></rect>`:''}`;
+ }).join('');
+ $('#monthly-progress').innerHTML=`<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="全体売上の折れ線と、営業・メンテ売上の積み上げ棒グラフ。目標は毎月450万円。">
+ ${axis}<line x1="${x(0)}" y1="${y(monthlyTarget)}" x2="${x(11)}" y2="${y(monthlyTarget)}" stroke="#8a9ba8" stroke-width="2" stroke-dasharray="7 5"/>
+ ${bars}
+ ${segments.map(points=>points.length>1?`<polyline points="${points.join(' ')}" fill="none" stroke="#d64051" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`:'').join('')}
+ ${data.map((v,i)=>v.actual===null?'':`<circle cx="${x(i)}" cy="${y(v.actual)}" r="5" fill="#d64051" stroke="#fff" stroke-width="1.5"><title>${v.month}月 全体売上 ${yen(v.actual)}</title></circle>`).join('')}
+ ${data.map((v,i)=>`<text x="${x(i)}" y="${height-12}" text-anchor="middle" fill="#42627d" font-size="12">${v.month}月</text>`).join('')}</svg><div class="chart-legend"><span><i style="background:#d64051"></i>全体売上（折れ線）</span><span><i style="background:#2876a7"></i>営業</span><span><i style="background:#1e806d"></i>メンテ</span><span><i style="background:#8a9ba8"></i>目標 450万円</span></div>`;
  const periods=[['上期（6〜11月）',data.slice(0,6)],['下期（12〜5月）',data.slice(6)],['年間（6〜5月）',data]];
  $('#period-progress').innerHTML=periods.map(([label,items])=>{const actual=items.reduce((sum,v)=>sum+(v.actual||0),0),target=items.length*monthlyTarget,count=items.filter(v=>v.actual!==null).length;return `<div class="progress-card"><strong>${label}</strong><div class="line"><span>入力済み ${count}/${items.length}か月<br>実績 ${yen(actual)}</span><strong>${Math.round(actual/target*100)}%</strong></div><small>期間目標 ${yen(target)}</small></div>`;}).join('');
- $('#department-chart').innerHTML=barChart(data,[{key:'sales',name:'営業',color:'#2876a7'},{key:'maintenance',name:'メンテ',color:'#1e806d'}],'円');
  $('#fresh-chart').innerHTML=barChart(data,[{key:'fresh',name:'戸建真水実績',color:'#2876a7'}],'件');
  $('#pt-chart').innerHTML=barChart(data,[{key:'pt',name:'メンテPT',color:'#1e806d'}],'PT');
  $('#pt-note').textContent=data.some(x=>x.estimatedPt)?'※ 年間ファイルにPT未入力の月は、確定したメンテ売上 ÷ 4,000円で換算しています。':'';
