@@ -8,7 +8,7 @@ const files={sales:null,confirmed:null,annual:null};
 const month=$('#month'),year=$('#year');
 for(const n of [6,7,8,10,11,12,1,2,3,4,5])month.add(new Option(`${n}月`,n));
 for(let y=2026;y<=Math.max(2028,new Date().getFullYear()+1);y++)year.add(new Option(`${y}年度`,y));
-let db,loaded=false,revision=0,storedSummaries={};
+let db,loaded=false,revision=0,storedSummaries={},detailAvailable=false;
 function storageKey(kind,n=Number(month.value),y=Number(year.value)){return `${y}:${n}:${kind}`;}
 function openStore(){return new Promise((resolve,reject)=>{const req=indexedDB.open('pkone-monthly-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('items');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 function readItem(key){return new Promise((resolve,reject)=>{const req=db.transaction('items','readonly').objectStore('items').get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -87,8 +87,8 @@ function columnIndex(ref){return [...ref.match(/^[A-Z]+/)[0]].reduce((a,c)=>a*26
 const fiscalMonths=[6,7,8,9,10,11,12,1,2,3,4,5];
 function showView(){
  const view=location.hash==='#sales'?'sales-view':location.hash==='#maintenance'?'maintenance':'dashboard';
- for(const id of ['dashboard','sales-view','maintenance'])$(`#${id}`).hidden=id!==view;
- $('#import-panel').hidden=view!=='dashboard';$('#empty-view').hidden=!$('#result').hidden||view==='dashboard';
+ for(const id of ['dashboard','sales-view','maintenance'])$(`#${id}`).hidden=id!==view||(id!=='dashboard'&&!detailAvailable);
+ $('#empty-view').hidden=view==='dashboard'||detailAvailable;
  if(!$('#result').hidden)window.scrollTo({top:0,behavior:'auto'});
 }
 const monthlyTarget=4500000;
@@ -118,7 +118,7 @@ function chartData(annual,d,n){
   const col=monthCol(m,69),mc=monthCol(m,68),summary=storedSummaries[m];
   const total=value(dept,`${col}14`),sales=value(dept,`${col}15`),maintenance=value(dept,`${col}16`);
   const annualPt=value(maint,`${mc}14`),entered=total>0||sales>0||maintenance>0||annualPt>0||Boolean(summary);
-  const selected=m===n;
+  const selected=m===n&&Boolean(d);
   return {month:m,actual:entered?(selected?d.overall:summary?.overall??total):null,
    sales:entered?(selected?d.sales.total:summary?.sales??sales):null,
    maintenance:entered?(selected?d.m.total:summary?.maintenance??maintenance):null,
@@ -185,10 +185,18 @@ async function updateAnnual(book,d,s,n){
  for(const sh of [annual,sales])book.zip.file(sh.path,serialize(sh.doc));
  return book.zip.generateAsync({type:'blob',compression:'DEFLATE'});
 }
-async function render(){if(!loaded)return;const id=++revision,status=$('#status');$('#save').disabled=true;$('#result').hidden=true;status.className='notice';try{
- if(!files.sales||!files.confirmed||!files.annual){status.textContent='この月の営業実績表・確定ファイルと年度の年間ファイルを選んでください。選択済みのファイルは保管されています。';showView();return;}
- status.textContent='読み込み中…';const n=Number(month.value),sales=salesData(parseXls(await files.sales.arrayBuffer()));
- const [confirmed,annual]=await Promise.all([loadBook(files.confirmed),loadBook(files.annual)]);
+async function render(){if(!loaded)return;const id=++revision,status=$('#status');$('#save').disabled=true;$('#result').hidden=true;detailAvailable=false;status.className='notice';try{
+ if(!files.annual){status.textContent='目次から年間ファイルを選んでください。選んだファイルはこのブラウザに保管されます。';showView();return;}
+ status.textContent='読み込み中…';const n=Number(month.value),annual=await loadBook(files.annual);if(id!==revision)return;
+ if(!files.sales||!files.confirmed){
+  const current=chartData(annual,null,n).find(x=>x.month===n);
+  $('#warning').hidden=true;
+  $('#total').textContent=yen(current?.actual??0);$('#sales-total').textContent=yen(current?.sales??0);$('#maintenance-total').textContent=yen(current?.maintenance??0);
+  renderProgress(annual,null,n);
+  $('#result').hidden=false;status.textContent=`${files.annual.name}を保管しています。年間ファイルの入力済み月を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;return;
+ }
+ const sales=salesData(parseXls(await files.sales.arrayBuffer()));
+ const confirmed=await loadBook(files.confirmed);
  const d=confirmedData(confirmed);if(id!==revision)return;
  const summary={overall:d.overall,sales:d.sales.total,maintenance:d.m.total,fresh:d.counts.result};
  await writeItem(storageKey('summary'),summary);storedSummaries[n]=summary;
@@ -208,8 +216,9 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  for(const [place,amounts,counts] of [['tochigi',d.m.tochigi,d.counts.tochigi],['koga',d.m.koga,d.counts.koga]])
   $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`).join('');
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
- $('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';showView();
- $('#save').disabled=false;$('#save').onclick=async()=>{try{
+ detailAvailable=true;$('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';showView();$('#save').disabled=false;
+ }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
+$('#save').onclick=async()=>{const status=$('#status');try{
  status.textContent='保存した各月を年間ファイルに反映中…';$('#save').disabled=true;
  const y=Number(year.value),book=await loadBook(files.annual);let blob,count=0;
  for(const m of fiscalMonths){const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
@@ -218,11 +227,11 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
   if(ss.sourceMonth!==m)throw Error(`${m}月に保管した営業実績表の契約月が${ss.sourceMonth}月です。月の選択を確認してください。`);
   blob=await updateAnnual(book,dd,ss,m);count++;
  }
- if(!count)throw Error('反映できる月がありません。');
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${y}年度_${count}か月反映.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
- status.textContent=`${count}か月分を反映した年間ファイルを保存しました。Excelで開いて数式を再計算してください。`;
+ const output=blob||files.annual,filename=count?`${y}年度_${count}か月反映.xlsx`:`${y}年度_年間ファイル.xlsx`;
+ if(count){const updated=new File([output],filename,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});await writeItem(`${y}:annual`,updated);files.annual=updated;fileLabel('annual');}
+ const url=URL.createObjectURL(output),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ status.textContent=count?`${count}か月分を反映した年間ファイルをブラウザに保管し、ダウンロードしました。`:'保管済みの年間ファイルをダウンロードしました。';status.className='notice ok';
  }catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
- }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
 for(const key of Object.keys(files))$(`#${key}`).addEventListener('change',async e=>{
  const picked=e.target.files[0];if(!picked||!db)return;
  try{await writeItem(key==='annual'?`${year.value}:annual`:storageKey(key),picked);
