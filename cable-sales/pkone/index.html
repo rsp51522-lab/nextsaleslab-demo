@@ -19,14 +19,14 @@
   </style>
 </head>
 <body><main class="shell">
-  <header><div class="brand"><span class="mark">NSL</span><span>PKONE 月末実績</span></div><div class="toolbar"><label>年度 <select id="year"></select></label><label>月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>年間ファイルに反映してダウンロード</button></div></header>
+  <header><div class="brand"><span class="mark">NSL</span><span>PKONE 月末実績</span></div><div class="toolbar"><label>年度 <select id="year"></select></label><label>月 <select id="month"><option value="9">9月</option></select></label><button id="save" class="primary" disabled>年間ファイルを保存・ダウンロード</button></div></header>
   <div id="file-imports" class="sidebar-imports"><h3>ファイル選択</h3>
     <label class="input-card"><strong>① 営業実績管理表 (.xls)</strong><input id="sales" type="file" accept=".xls"><span class="file-choose">ファイルを選択</span><p id="sales-name">未選択</p></label>
     <label class="input-card"><strong>② 月次確定ファイル (.xlsx)</strong><input id="confirmed" type="file" accept=".xlsx"><span class="file-choose">ファイルを選択</span><p id="confirmed-name">未選択</p></label>
     <label class="input-card"><strong>③ 年間ファイル (.xlsx)</strong><input id="annual" type="file" accept=".xlsx"><span class="file-choose">ファイルを選択</span><p id="annual-name">未選択</p></label>
     <p class="sidebar-help">選んだファイルは年度・月ごとにこのブラウザへ保存。同じ月を選び直すと更新します。</p>
   </div>
-  <p id="status" class="notice" role="status">3つのファイルを選んでください。</p>
+  <p id="status" class="notice" role="status">目次から年間ファイルを選んでください。</p>
   <p id="empty-view" class="card" hidden>この月のデータがありません。目次からファイルを選んでください。営業とメンテには自動反映されます。</p>
   <section id="result" hidden>
     <div id="warning" class="warning" hidden></div>
@@ -50,4 +50,4 @@
     </section>
     <p class="sub">営業の戸建真水は営業実績管理表から、キャンセル真水と売上・メンテ売上は確定ファイルから読み込みます。保存した年間ファイルはExcelで開くと数式が再計算されます。</p>
   </section>
-</main><script src="./jszip.min.js"></script><script src="../sidebar.js"></script><script>document.querySelector('.side-menu').insertBefore(document.querySelector('#file-imports'),document.querySelector('.side-menu small'));</script><script type="module" src="./app-20260930-0905.js"></script></body></html>
+</main><script src="./jszip.min.js"></script><script src="../sidebar.js"></script><script>document.querySelector('.side-menu').insertBefore(document.querySelector('#file-imports'),document.querySelector('.side-menu small'));</script><script type="module" src="./app-20260930-0918.js"></script></body></html>
