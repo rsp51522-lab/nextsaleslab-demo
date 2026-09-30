@@ -12,8 +12,8 @@ let db,loaded=false,revision=0,storedSummaries={},detailAvailable=false;
 function storageKey(kind,n=Number(month.value),y=Number(year.value)){return `${y}:${n}:${kind}`;}
 function openStore(){return new Promise((resolve,reject)=>{const req=indexedDB.open('pkone-monthly-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('items');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 function readItem(key){return new Promise((resolve,reject)=>{const req=db.transaction('items','readonly').objectStore('items').get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
-function writeItem(key,value){return new Promise((resolve,reject)=>{const req=db.transaction('items','readwrite').objectStore('items').put(value,key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error);});}
-function deleteItem(key){return new Promise((resolve,reject)=>{const req=db.transaction('items','readwrite').objectStore('items').delete(key);req.onsuccess=()=>resolve();req.onerror=()=>reject(req.error);});}
+function writeItem(key,value){return new Promise((resolve,reject)=>{const tx=db.transaction('items','readwrite');tx.objectStore('items').put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('保存が中断されました。'));});}
+function deleteItem(key){return new Promise((resolve,reject)=>{const tx=db.transaction('items','readwrite');tx.objectStore('items').delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('削除が中断されました。'));});}
 function fileLabel(key){$(`#${key}-name`).textContent=files[key]?.name||'未選択';}
 async function loadSelection(){
  const id=++revision;loaded=false;const n=Number(month.value),y=Number(year.value);
@@ -185,6 +185,22 @@ async function updateAnnual(book,d,s,n){
  for(const sh of [annual,sales])book.zip.file(sh.path,serialize(sh.doc));
  return book.zip.generateAsync({type:'blob',compression:'DEFLATE'});
 }
+async function syncAnnual(){
+ if(!files.annual)return 0;
+ const y=Number(year.value),book=await loadBook(files.annual);let output,count=0;
+ for(const m of fiscalMonths){
+  const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
+  if(!sf||!cf)continue;
+  const sales=salesData(parseXls(await sf.arrayBuffer())),confirmed=confirmedData(await loadBook(cf));
+  if(sales.sourceMonth!==m)throw Error(`${m}月の営業実績表は${sales.sourceMonth}月のデータです。選択した月を確認してください。`);
+  output=await updateAnnual(book,confirmed,sales,m);count++;
+ }
+ if(count){
+  const updated=new File([output],`${y}年度_更新済.xlsx`,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  await writeItem(`${y}:annual`,updated);files.annual=updated;fileLabel('annual');
+ }
+ return count;
+}
 async function render(){if(!loaded)return;const id=++revision,status=$('#status');$('#save').disabled=true;$('#result').hidden=true;detailAvailable=false;status.className='notice';try{
  if(!files.annual){status.textContent='目次から年間ファイルを選んでください。選んだファイルはこのブラウザに保管されます。';showView();return;}
  status.textContent='読み込み中…';const n=Number(month.value),annual=await loadBook(files.annual);if(id!==revision)return;
@@ -193,7 +209,7 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
   $('#warning').hidden=true;
   $('#total').textContent=yen(current?.actual??0);$('#sales-total').textContent=yen(current?.sales??0);$('#maintenance-total').textContent=yen(current?.maintenance??0);
   renderProgress(annual,null,n);
-  $('#result').hidden=false;status.textContent=`${files.annual.name}を保管しています。年間ファイルの入力済み月を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;return;
+  $('#result').hidden=false;status.textContent=`${files.annual.name}は保存済みです。年間ファイルの入力済み月を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;return;
  }
  const sales=salesData(parseXls(await files.sales.arrayBuffer()));
  const confirmed=await loadBook(files.confirmed);
@@ -216,28 +232,31 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  for(const [place,amounts,counts] of [['tochigi',d.m.tochigi,d.counts.tochigi],['koga',d.m.koga,d.counts.koga]])
   $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`).join('');
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
- detailAvailable=true;$('#result').hidden=false;status.textContent=`確定ファイルの営業 ${yen(d.sales.total)} とメンテ ${yen(d.m.total)} を確認しました。`;status.className='notice ok';showView();$('#save').disabled=false;
+ detailAvailable=true;$('#result').hidden=false;status.textContent=`${year.value}年度 ${n}月は保存済みです。確定ファイルの営業 ${yen(d.sales.total)}・メンテ ${yen(d.m.total)} を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
 $('#save').onclick=async()=>{const status=$('#status');try{
- status.textContent='保存した各月を年間ファイルに反映中…';$('#save').disabled=true;
- const y=Number(year.value),book=await loadBook(files.annual);let blob,count=0;
- for(const m of fiscalMonths){const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
-  if(!sf||!cf)continue;
-  const ss=salesData(parseXls(await sf.arrayBuffer())),dd=confirmedData(await loadBook(cf));
-  if(ss.sourceMonth!==m)throw Error(`${m}月に保管した営業実績表の契約月が${ss.sourceMonth}月です。月の選択を確認してください。`);
-  blob=await updateAnnual(book,dd,ss,m);count++;
- }
- const output=blob||files.annual,filename=count?`${y}年度_${count}か月反映.xlsx`:`${y}年度_年間ファイル.xlsx`;
- if(count){const updated=new File([output],filename,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});await writeItem(`${y}:annual`,updated);files.annual=updated;fileLabel('annual');}
- const url=URL.createObjectURL(output),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
- status.textContent=count?`${count}か月分を反映した年間ファイルをブラウザに保管し、ダウンロードしました。`:'保管済みの年間ファイルをダウンロードしました。';status.className='notice ok';
+ if(!files.annual)throw Error('先に年間ファイルを選んでください。');
+ status.textContent='年間ファイルを保存中…';$('#save').disabled=true;
+ const count=await syncAnnual(),output=files.annual;
+ const url=URL.createObjectURL(output),a=document.createElement('a');a.href=url;a.download=output.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ status.textContent=count?`${count}か月分を反映した年間ファイルを保存し、ダウンロードしました。`:'保存済みの年間ファイルをダウンロードしました。';status.className='notice ok';
  }catch(e){status.textContent=e.message;status.className='notice error';}finally{$('#save').disabled=false;}};
 for(const key of Object.keys(files))$(`#${key}`).addEventListener('change',async e=>{
  const picked=e.target.files[0];if(!picked||!db)return;
- try{await writeItem(key==='annual'?`${year.value}:annual`:storageKey(key),picked);
-  if(key==='confirmed'){await deleteItem(storageKey('summary'));delete storedSummaries[Number(month.value)];}
-  files[key]=picked;fileLabel(key);render();
- }catch(err){$('#status').textContent=`保存できませんでした: ${err.message}`;$('#status').className='notice error';}
+ const y=Number(year.value),n=Number(month.value);year.disabled=true;month.disabled=true;$('#save').disabled=true;
+ const status=$('#status');status.textContent=`${picked.name}を確認して保存中…`;status.className='notice';
+ try{
+  if(key==='sales'){const parsed=salesData(parseXls(await picked.arrayBuffer()));if(parsed.sourceMonth!==n)throw Error(`この営業実績表は${parsed.sourceMonth}月です。画面右上で${parsed.sourceMonth}月を選んでください。`);}
+  else if(key==='confirmed')confirmedData(await loadBook(picked));
+  else {const book=await loadBook(picked);if(!book.sheets['部署売上']||!book.sheets['営業']||!book.sheets['メンテ'])throw Error('年間ファイルに「部署売上」「営業」「メンテ」がありません。');}
+  await writeItem(key==='annual'?`${y}:annual`:storageKey(key,n,y),picked);
+  if(key==='confirmed'){await deleteItem(storageKey('summary',n,y));delete storedSummaries[n];}
+  files[key]=picked;fileLabel(key);
+  let syncError;try{await syncAnnual();}catch(err){syncError=err;}
+  await render();
+  if(syncError){status.textContent=`ファイルは保存しましたが、年間ファイルへの反映に失敗しました: ${syncError.message}`;status.className='notice error';}
+ }catch(err){status.textContent=`保存できませんでした: ${err.message}`;status.className='notice error';}
+ finally{year.disabled=false;month.disabled=false;e.target.value='';}
 });
 async function selectPeriod(){if(!db)return;try{await writeItem('selection',{year:Number(year.value),month:Number(month.value)});await loadSelection();}catch(e){$('#status').textContent=e.message;$('#status').className='notice error';}}
 month.addEventListener('change',selectPeriod);year.addEventListener('change',selectPeriod);
