@@ -56,16 +56,18 @@ function salesData(s){
  const rows=[...s.cells.entries()].filter(([i,r])=>i>=5&&Number.isFinite(r[1])&&r[4]&&r[5]);
  const reps={};for(const [,r] of rows){const k=repName(r[4]),x=reps[k]??={fresh:0,cancel:0,op:0};x.fresh+=Number(r[64])||0;for(let col=46;col<=62;col++)x.op+=Number(r[col])||0;}
  for(const [i,r] of s.cancellations)if(i>=5&&Number.isFinite(r[1])&&r[2]&&r[3]){const k=repName(r[2]),x=reps[k]??={fresh:0,cancel:0};x.cancel+=Number(r[61])||0;}
- const serial=rows[0]?.[1]?.[1];if(!serial)throw Error('営業の契約行が見つかりません。');
- const date=new Date(Date.UTC(1899,11,30)+Math.round(serial)*86400000);
- return {reps,rows:rows.length,sourceMonth:date.getUTCMonth()+1};
+ if(!rows.length)throw Error('営業の契約行が見つかりません。');
+ const sheetMonth=Number(String(s.name||'').normalize('NFKC').match(/(?:^|[^0-9])([1-9]|1[0-2])月/)?.[1]);
+ const months=rows.map(([,r])=>new Date(Date.UTC(1899,11,30)+Math.round(r[1])*86400000).getUTCMonth()+1);
+ const sourceMonth=sheetMonth||[...new Set(months)].sort((a,b)=>months.filter(x=>x===b).length-months.filter(x=>x===a).length)[0];
+ return {reps,rows:rows.length,sourceMonth};
 }
 function confirmedData(book){const s=book.sheets['実績']?.map;if(!s)throw Error('確定ファイルに「実績」シートがありません。');
  const g=(ref)=>value(s,ref);
  const sales={shared:g('D30'),existing:g('D31'),tenant:g('D32'),op:g('D33'),fixed:g('D34'),cancel:g('D35'),total:g('D13')};
  const m={tochigi:[g('E48'),g('E49'),g('E50'),g('E51')],koga:[g('F48'),g('F49'),g('F50'),g('F51')],total:g('D14')};
  const counts={result:g('G26'),gain:g('G28'),cancel:g('G35'),shared:g('G30'),existing:g('G31'),tenant:g('G32'),op:g('G33'),tochigi:[g('H48'),g('H49'),g('H50'),g('H51')],koga:[g('I48'),g('I49'),g('I50'),g('I51')]};
- if(!sales.total||!m.total||Math.abs(sales.shared+sales.existing+sales.tenant+sales.op+sales.fixed-sales.cancel-sales.total)>1||Math.abs([...m.tochigi,...m.koga].reduce((a,b)=>a+b,0)-m.total)>1)throw Error('確定ファイルの営業・メンテ内訳が合計と一致しません。');
+ if(!Number.isFinite(sales.total)||!Number.isFinite(m.total)||Math.abs(sales.shared+sales.existing+sales.tenant+sales.op+sales.fixed-sales.cancel-sales.total)>1||Math.abs([...m.tochigi,...m.koga].reduce((a,b)=>a+b,0)-m.total)>1)throw Error('確定ファイルの営業・メンテ内訳が合計と一致しません。');
  const cancelSheet=book.sheets['栃木キャン']?.map,pk=book.sheets['栃木PK']?.map;
  if(!cancelSheet||!pk||value(cancelSheet,'H66')!==sales.cancel)throw Error('確定ファイルの栃木キャンと実績の金額が一致しません。');
  const repCancel={};for(let r=61;r<=64;r++)if(cancelSheet[`B${r}`])repCancel[repName(cancelSheet[`B${r}`])]={fresh:value(cancelSheet,`G${r}`),sales:value(cancelSheet,`H${r}`)};
@@ -117,14 +119,16 @@ function chartData(annual,d,n){
  return fiscalMonths.map(m=>{
   const col=monthCol(m,69),mc=monthCol(m,68),summary=storedSummaries[m];
   const total=value(dept,`${col}14`),sales=value(dept,`${col}15`),maintenance=value(dept,`${col}16`);
-  const annualPt=value(maint,`${mc}14`),entered=total>0||sales>0||maintenance>0||annualPt>0||Boolean(summary);
-  const selected=m===n&&Boolean(d);
-  return {month:m,actual:entered?(selected?d.overall:summary?.overall??total):null,
-   sales:entered?(selected?d.sales.total:summary?.sales??sales):null,
-   maintenance:entered?(selected?d.m.total:summary?.maintenance??maintenance):null,
-   fresh:entered?(selected?d.counts.result:summary?.fresh??value(dept,`${col}75`)):null,
-   pt:entered?(annualPt||((selected?d.m.total:summary?.maintenance??maintenance)/4000)):null,
-   estimatedPt:entered&&!annualPt&&Boolean(selected?d.m.total:summary?.maintenance??maintenance)};
+  const annualPt=value(maint,`${mc}14`),annualEntered=total>0||sales>0||maintenance>0||annualPt>0;
+  const entered=annualEntered||Boolean(summary)||m===n&&Boolean(d),selected=m===n&&Boolean(d);
+  const actual=annualEntered?total:selected?d.overall:summary?.overall;
+  const salesAmount=annualEntered?sales:selected?d.sales.total:summary?.sales;
+  const maintenanceAmount=annualEntered?maintenance:selected?d.m.total:summary?.maintenance;
+  const fresh=annualEntered?(value(dept,`${col}75`)||summary?.fresh||(selected?d.counts.result:0)):selected?d.counts.result:summary?.fresh;
+  return {month:m,actual:entered?actual:null,sales:entered?salesAmount:null,
+   maintenance:entered?maintenanceAmount:null,fresh:entered?fresh:null,
+   pt:entered?(annualPt||maintenanceAmount/4000):null,
+   estimatedPt:entered&&!annualPt&&Boolean(maintenanceAmount)};
  });
 }
 function barChart(data,series,unit){
@@ -189,6 +193,8 @@ async function syncAnnual(){
  if(!files.annual)return 0;
  const y=Number(year.value),book=await loadBook(files.annual);let output,count=0;
  for(const m of fiscalMonths){
+  const c=monthCol(m,69),monthly=book.sheets['部署売上']?.map;
+  if(monthly&&(value(monthly,`${c}14`)>0||value(monthly,`${c}15`)>0||value(monthly,`${c}16`)>0))continue;
   const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
   if(!sf||!cf)continue;
   const sales=salesData(parseXls(await sf.arrayBuffer())),confirmed=confirmedData(await loadBook(cf));
@@ -215,25 +221,33 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  const confirmed=await loadBook(files.confirmed);
  const d=confirmedData(confirmed);if(id!==revision)return;
  const summary={overall:d.overall,sales:d.sales.total,maintenance:d.m.total,fresh:d.counts.result};
- await writeItem(storageKey('summary'),summary);storedSummaries[n]=summary;
+ const current=chartData(annual,d,n).find(x=>x.month===n);
+ const annualEntered=value(annual.sheets['部署売上'].map,`${monthCol(n,69)}14`)>0;
+ if(!annualEntered){await writeItem(storageKey('summary'),summary);storedSummaries[n]=summary;}
  const warnings=[];if(sales.sourceMonth!==n)warnings.push(`営業実績表は${sales.sourceMonth}月の契約日です。反映先は${n}月です。`);
+ if(annualEntered&&(current.sales!==d.sales.total||current.maintenance!==d.m.total))warnings.push(`年間ファイルを優先しています。確定ファイルの内訳は営業 ${yen(d.sales.total)}・メンテ ${yen(d.m.total)}、年間ファイルは営業 ${yen(current.sales)}・メンテ ${yen(current.maintenance)} です。`);
  const unallocated=d.sales.shared+d.sales.existing+d.sales.tenant+d.sales.op-Object.values(d.repSales).reduce((a,b)=>a+b,0);
  if(unallocated)warnings.push(`担当者別元売上と営業区分売上の差額 ${yen(unallocated)} は担当者に配賦していません。固定費も担当者別には含めません。`);
  if(Math.abs(d.overall-d.sales.total-d.m.total)>1)warnings.push('確定ファイルの合計に営業・メンテ以外の売上が含まれます。');
  const existing=annual.sheets['部署売上'].map;if(existing[`${monthCol(n,69)}40`]||existing[`${monthCol(n,69)}53`])warnings.push('年間ファイルのこの月には既存値があります。ダウンロード時は保管した月の対象項目を置き換えます。');
  $('#warning').hidden=!warnings.length;$('#warning').textContent=warnings.join('　');
- $('#total').textContent=yen(d.overall);$('#sales-total').textContent=yen(d.sales.total);$('#maintenance-total').textContent=yen(d.m.total);
+ $('#total').textContent=yen(current.actual);$('#sales-total').textContent=yen(current.sales);$('#maintenance-total').textContent=yen(current.maintenance);
  const freshGain=d.counts.shared+d.counts.existing;
- $('#sales-kpi').textContent=yen(d.sales.total);$('#shared-kpi').textContent=`${freshGain-d.counts.cancel}件`;$('#existing-kpi').textContent=`${freshGain}件`;
- $('#maintenance-kpi').textContent=yen(d.m.total);$('#tochigi-kpi').textContent=yen(d.m.tochigi.reduce((a,b)=>a+b,0));$('#koga-kpi').textContent=yen(d.m.koga.reduce((a,b)=>a+b,0));
+ $('#sales-kpi').textContent=yen(current.sales);$('#shared-kpi').textContent=`${freshGain-d.counts.cancel}件`;$('#existing-kpi').textContent=`${freshGain}件`;
+ $('#maintenance-kpi').textContent=yen(current.maintenance);$('#tochigi-kpi').textContent=yen(annualEntered?value(annual.sheets['部署売上'].map,`${monthCol(n,69)}49`):d.m.tochigi.reduce((a,b)=>a+b,0));$('#koga-kpi').textContent=yen(annualEntered?value(annual.sheets['部署売上'].map,`${monthCol(n,69)}50`):d.m.koga.reduce((a,b)=>a+b,0));
  renderProgress(annual,d,n);
  $('#sales-rows').innerHTML=[['シェアド',d.counts.shared,d.sales.shared],['既存',d.counts.existing,d.sales.existing],['店子',d.counts.tenant,d.sales.tenant],['OP',d.counts.op,d.sales.op],['固定費',0,d.sales.fixed],['キャンセル控除',d.counts.cancel,-d.sales.cancel]].map(([name,count,amount])=>`<tr${name==='キャンセル控除'?' class="cancel-row"':''}><th>${name}</th><td>${count}</td><td>${yen(amount)}</td></tr>`).join('');
  const oldMaintenance=$('#maintenance-rows');
  if(oldMaintenance)oldMaintenance.closest('.card').outerHTML='<div class="maintenance-details"><div class="card"><h3>栃木</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="tochigi-rows"></tbody></table></div></div><div class="card"><h3>古河</h3><div class="scroll"><table><thead><tr><th>区分</th><th>件数・時間</th><th>確定売上</th></tr></thead><tbody id="koga-rows"></tbody></table></div></div></div>';
+ const annualMap=annual.sheets['部署売上'].map,c=monthCol(n,69);
  for(const [place,amounts,counts] of [['tochigi',d.m.tochigi,d.counts.tochigi],['koga',d.m.koga,d.counts.koga]])
-  $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${counts[i]}</td><td>${yen(amounts[i])}</td></tr>`).join('');
+  {const row=place==='tochigi'?53:59,cr=place==='tochigi'?85:90;
+   const shownAmounts=annualEntered?amounts.map((_,i)=>value(annualMap,`${c}${row+i}`)):amounts;
+   const shownCounts=annualEntered?counts.map((_,i)=>value(annualMap,`${c}${cr+i}`)):counts;
+  $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${shownCounts[i]}</td><td>${yen(shownAmounts[i])}</td></tr>`).join('');
+  }
  $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
- detailAvailable=true;$('#result').hidden=false;status.textContent=`${year.value}年度 ${n}月は保存済みです。確定ファイルの営業 ${yen(d.sales.total)}・メンテ ${yen(d.m.total)} を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;
+ detailAvailable=true;$('#result').hidden=false;status.textContent=`${year.value}年度 ${n}月は保存済みです。年間ファイルの営業 ${yen(current.sales)}・メンテ ${yen(current.maintenance)} を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
 $('#save').onclick=async()=>{const status=$('#status');try{
  if(!files.annual)throw Error('先に年間ファイルを選んでください。');
