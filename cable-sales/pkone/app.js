@@ -223,7 +223,8 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  const existing=annual.sheets['部署売上'].map;if(existing[`${monthCol(n,69)}40`]||existing[`${monthCol(n,69)}53`])warnings.push('年間ファイルのこの月には既存値があります。ダウンロード時は保管した月の対象項目を置き換えます。');
  $('#warning').hidden=!warnings.length;$('#warning').textContent=warnings.join('　');
  $('#total').textContent=yen(d.overall);$('#sales-total').textContent=yen(d.sales.total);$('#maintenance-total').textContent=yen(d.m.total);
- $('#sales-kpi').textContent=yen(d.sales.total);$('#shared-kpi').textContent=`${d.counts.shared}件`;$('#existing-kpi').textContent=`${d.counts.existing}件`;
+ const freshGain=d.counts.shared+d.counts.existing;
+ $('#sales-kpi').textContent=yen(d.sales.total);$('#shared-kpi').textContent=`${freshGain-d.counts.cancel}件`;$('#existing-kpi').textContent=`${freshGain}件`;
  $('#maintenance-kpi').textContent=yen(d.m.total);$('#tochigi-kpi').textContent=yen(d.m.tochigi.reduce((a,b)=>a+b,0));$('#koga-kpi').textContent=yen(d.m.koga.reduce((a,b)=>a+b,0));
  renderProgress(annual,d,n);
  $('#sales-rows').innerHTML=[['シェアド',d.counts.shared,d.sales.shared],['既存',d.counts.existing,d.sales.existing],['店子',d.counts.tenant,d.sales.tenant],['OP',d.counts.op,d.sales.op],['固定費',0,d.sales.fixed],['キャンセル控除',d.counts.cancel,-d.sales.cancel]].map(([name,count,amount])=>`<tr${name==='キャンセル控除'?' class="cancel-row"':''}><th>${name}</th><td>${count}</td><td>${yen(amount)}</td></tr>`).join('');
