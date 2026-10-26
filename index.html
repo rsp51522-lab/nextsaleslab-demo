@@ -753,7 +753,7 @@
       </div>
 
       <div class="field">
-        <label>ご希望サービス（数量を選択）<span class="req">1点以上</span></label>
+        <label>制作・サービス項目（数量を選択）<span class="req">1点以上</span></label>
         <table class="products">
           <thead>
             <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業日数</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
@@ -782,9 +782,18 @@
         </div>
       </div>
 
+      <div class="field">
+        <label>月額保守料（数量を選択）</label>
+        <p class="note">必要な保守プランの数量を選択してください。制作費とは別に毎月発生する料金です。</p>
+        <table class="products">
+          <thead><tr><th>保守プラン</th><th class="num">月額単価（税抜）</th><th class="num">数量</th></tr></thead>
+          <tbody id="maintenanceRows"></tbody>
+        </table>
+      </div>
+
       <div class="summary-box">
         <div class="summary-row">
-          <span>割引額（税抜）</span>
+          <span>初期費用の割引額（税抜）</span>
           <div class="discount-input">
             <span>¥</span>
             <input type="text" id="discount" value="0" inputmode="numeric" oninput="updateTotal()">
@@ -799,9 +808,12 @@
           <strong id="liveTax">¥0</strong>
         </div>
         <div class="total-box">
-          <span>合計金額（税込）</span>
+          <span>初期費用合計（税込）</span>
           <strong id="liveTotal">¥0</strong>
         </div>
+        <div class="summary-row"><span>月額保守料（税抜）</span><strong id="liveMonthlySubtotal">¥0/月</strong></div>
+        <div class="summary-row"><span>月額の消費税（10%）</span><strong id="liveMonthlyTax">¥0/月</strong></div>
+        <div class="total-box"><span>月額保守料合計（税込）</span><strong id="liveMonthlyTotal">¥0/月</strong></div>
       </div>
 
       <p class="error-msg" id="formError"></p>
@@ -842,7 +854,7 @@
           <div>
             <div class="est-addressee" id="estAddressee"></div>
             <div style="margin-top:10px;">下記の通りお見積り申し上げます。</div>
-            <div class="est-total">お見積金額　<span id="estTotalTop"></span>（税込）</div>
+            <div class="est-total">初期費用　<span id="estTotalTop"></span>（税込）</div>
           </div>
           <div class="est-company">
             発行日：<span id="estDate"></span><br>
@@ -855,6 +867,7 @@
           </div>
         </div>
 
+        <h3>制作・サービス項目（初期費用）</h3>
         <table class="est-items">
           <thead>
             <tr><th>商品名</th><th class="unit-col">単位</th><th class="num">数量</th><th class="num">単価（税抜）</th><th class="num">金額（税抜）</th></tr>
@@ -866,7 +879,21 @@
           <div><span>小計（税抜）</span><span id="estSubtotal"></span></div>
           <div><span>消費税（10%）</span><span id="estTax"></span></div>
           <div><span>割引（税抜）</span><span id="estDiscount"></span></div>
-          <div class="grand"><span>合計金額（税込）</span><span id="estTotal"></span></div>
+          <div class="grand"><span>初期費用合計（税込）</span><span id="estTotal"></span></div>
+        </div>
+
+        <div id="estMaintenanceSection" class="hidden">
+          <h3 style="margin-top:20px;">月額保守料</h3>
+          <table class="est-items">
+            <thead><tr><th>保守プラン</th><th class="num">数量</th><th class="num">月額単価（税抜）</th><th class="num">月額金額（税抜）</th></tr></thead>
+            <tbody id="estMaintenanceItems"></tbody>
+          </table>
+          <div class="est-sums">
+            <div><span>月額小計（税抜）</span><span id="estMonthlySubtotal"></span></div>
+            <div><span>月額消費税（10%）</span><span id="estMonthlyTax"></span></div>
+            <div class="grand"><span>月額保守料（税込）</span><span id="estMonthlyTotal"></span></div>
+          </div>
+          <p class="est-note">月額保守料は初期費用とは別に毎月発生します。</p>
         </div>
 
         <div class="est-note"></div>
@@ -1032,7 +1059,18 @@
     { code: "NSL027", name: "共有データーベース", unit: "件", workHours: 1, priceEx: 60000 },
     { code: "NSL028", name: "データ管理小規模", unit: "ID", workHours: 1, priceEx: 5000 },
     { code: "NSL029", name: "データ管理中規模", unit: "ID", workHours: 1, priceEx: 10000 },
-    { code: "NSL030", name: "データ管理大規模", unit: "ID", workHours: 1, priceEx: 25000 }
+    { code: "NSL030", name: "データ管理大規模", unit: "ID", workHours: 1, priceEx: 25000 },
+    { code: "NSL031", name: "Google MAP API取得・設定", unit: "件", workHours: "", priceEx: 30000 },
+    { code: "NSL032", name: "工程表制作・自動反映", unit: "件", workHours: "", priceEx: 30000 },
+    { code: "NSL033", name: "社員・資格・自動判別", unit: "件", workHours: "", priceEx: 20000 },
+    { code: "NSL034", name: "手動入力ページ", unit: "件", workHours: "", priceEx: 10000 },
+    { code: "NSL035", name: "LP制作", unit: "件", workHours: "", priceEx: 60000 },
+    { code: "NSL036", name: "LPフォーム", unit: "件", workHours: "", priceEx: 20000 },
+    { code: "NSL037", name: "LPデザイン", unit: "件", workHours: "", priceEx: 50000 },
+    { code: "NSL038", name: "公式LINE", unit: "件", workHours: "", priceEx: 30000 },
+    { code: "NSLM001", name: "月額保守料（アフターのみ）", unit: "件", billing: "monthly", workHours: "", priceEx: 2000 },
+    { code: "NSLM002", name: "月額保守料（小規模：Xサーバー・SQL）", unit: "件", billing: "monthly", workHours: "", priceEx: 4000 },
+    { code: "NSLM003", name: "月額保守料（中規模：Vercel・Supabase）", unit: "件", billing: "monthly", workHours: "", priceEx: 5000 }
   ];
   var TAX_RATE = 0.1;
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
@@ -1082,6 +1120,25 @@
     return Math.round(amountEx * TAX_RATE);
   }
 
+  function isMonthlyItem(item) {
+    return item.billing === "monthly" || (!item.billing && /データ管理|月額|保守|サブスク|クラウド管理/.test(item.name));
+  }
+
+  function calculateTotals(items, discount) {
+    var initial = 0;
+    var monthly = 0;
+    items.forEach(function(item) {
+      if (isMonthlyItem(item)) monthly += item.subtotalEx;
+      else initial += item.subtotalEx;
+    });
+    discount = Math.min(initial, Math.max(0, discount || 0));
+    var subtotal = initial - discount;
+    var tax = calcTax(subtotal);
+    var monthlyTax = calcTax(monthly);
+    return { subtotal: subtotal, tax: tax, discount: discount, total: subtotal + tax,
+      monthlySubtotal: monthly, monthlyTax: monthlyTax, monthlyTotal: monthly + monthlyTax };
+  }
+
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -1115,7 +1172,10 @@
       representative: state.name || "",
       appointmentDate: todayStr("-"),
       sales: "浅野",
-      items: state.items.map(function(item) {
+      monthlySubtotal: state.monthlySubtotal || 0,
+      monthlyTotal: state.monthlyTotal || 0,
+      monthlyItems: state.items.filter(isMonthlyItem),
+      items: state.items.filter(function(item) { return !isMonthlyItem(item); }).map(function(item) {
         return {
           name: item.name,
           unit: item.unit,
@@ -1326,7 +1386,12 @@
     var orderMatch = normalized.match(/(?:注文番号|見積番号)\s*[:：]?\s*(NSL[-－][A-Za-z0-9-]+)/i) || normalized.match(/NSL[-－]\d{6,}(?:-\d+)?/i);
     var subtotalMatch = normalized.match(/小計(?:（税抜）)?\s*¥?\s*([\d,]+)/);
     var taxMatch = normalized.match(/消費税(?:（10%）)?\s*¥?\s*([\d,]+)/);
-    var totalMatches = Array.from(normalized.matchAll(/(?:合計金額|お見積金額)[^\d\n]*([\d,]+)/g));
+    var totalMatches = Array.from(normalized.matchAll(/(?:初期費用合計|合計金額|お見積金額)[^\d\n]*([\d,]+)/g));
+    var monthlyMatch = normalized.match(/月額小計（税抜）\s*¥?\s*([\d,]+)/);
+    var monthlySubtotal = monthlyMatch ? parseMoney(monthlyMatch[1]) : 0;
+    var discountMatch = normalized.match(/割引（税抜）\s*[-－]?\s*¥?\s*([\d,]+)/);
+    var discount = discountMatch ? parseMoney(discountMatch[1]) : 0;
+    var separateBilling = /制作・サービス項目（初期費用）/.test(normalized);
     var subtotal = subtotalMatch ? parseMoney(subtotalMatch[1]) : 0;
     var tax = taxMatch ? parseMoney(taxMatch[1]) : 0;
     var total = totalMatches.length ? parseMoney(totalMatches[totalMatches.length - 1][1]) : subtotal + tax;
@@ -1337,11 +1402,18 @@
       if (/商品名|小計|消費税|割引|合計金額/.test(line)) return;
       var match = line.match(/^\s*(.+?)\s+(ID|枚|件|時間|式|セット|月)\s+(\d+)\s+¥?\s*([\d,]+)\s+¥?\s*([\d,]+)\s*$/i);
       if (match) {
-        items.push({ name: match[1].trim(), unit: match[2], qty: Number(match[3]), unitEx: parseMoney(match[4]), subtotalEx: parseMoney(match[5]), tax: calcTax(parseMoney(match[5])) });
+        items.push({ name: match[1].trim(), billing: separateBilling ? "one-time" : undefined, unit: match[2], qty: Number(match[3]), unitEx: parseMoney(match[4]), subtotalEx: parseMoney(match[5]), tax: calcTax(parseMoney(match[5])) });
+      }
+      var monthlyRow = line.match(/^\s*(月額保守料（.+?）)\s+(\d+)\s+¥?\s*([\d,]+)\s*\/月\s+¥?\s*([\d,]+)\s*\/月\s*$/);
+      if (monthlyRow) {
+        items.push({ name: monthlyRow[1], billing: "monthly", unit: "件", qty: Number(monthlyRow[2]), unitEx: parseMoney(monthlyRow[3]), subtotalEx: parseMoney(monthlyRow[4]), tax: calcTax(parseMoney(monthlyRow[4])) });
       }
     });
-    if (!items.length) {
-      items.push({ name: "見積書記載のアプリ開発・サービス一式", unit: "式", qty: 1, unitEx: subtotal, subtotalEx: subtotal, tax: tax });
+    if (!items.some(function(item) { return !isMonthlyItem(item); }) && (subtotal > 0 || !items.length)) {
+      items.push({ name: "見積書記載のアプリ開発・サービス一式", billing: "one-time", unit: "式", qty: 1, unitEx: subtotal + discount, subtotalEx: subtotal + discount, tax: tax });
+    }
+    if (monthlySubtotal && !items.some(isMonthlyItem)) {
+      items.push({ name: "月額保守料（見積書記載）", billing: "monthly", unit: "件", qty: 1, unitEx: monthlySubtotal, subtotalEx: monthlySubtotal, tax: calcTax(monthlySubtotal) });
     }
     return {
       ctype: isCompany ? "法人" : "個人",
@@ -1353,8 +1425,11 @@
       items: items,
       subtotal: subtotal,
       tax: tax,
-      discount: 0,
+      discount: discount,
       total: total || subtotal + tax,
+      monthlySubtotal: monthlySubtotal,
+      monthlyTax: calcTax(monthlySubtotal),
+      monthlyTotal: monthlySubtotal + calcTax(monthlySubtotal),
       orderNo: orderMatch ? (orderMatch[1] || orderMatch[0]).replace(/－/g, "-") : "NSL-" + nowStamp(),
       customerNo: customerNoStamp()
     };
@@ -1552,8 +1627,8 @@
     var monthly = 0;
     var development = 0;
     state.items.forEach(function(item) {
-      if (/初期設定/.test(item.name)) setup += item.subtotalEx;
-      else if (/データ管理|月額|保守|サブスク|クラウド管理/.test(item.name)) monthly += item.subtotalEx;
+      if (isMonthlyItem(item)) monthly += item.subtotalEx;
+      else if (/初期設定/.test(item.name)) setup += item.subtotalEx;
       else development += item.subtotalEx;
     });
     var remainingDiscount = state.discount || 0;
@@ -1567,7 +1642,7 @@
   function buildContractBodyHtml() {
     var customer = state.company || state.name;
     var primaryItems = state.items.filter(function(item) {
-      return !/初期設定|データ管理|月額|保守|サブスク|クラウド管理/.test(item.name);
+      return !isMonthlyItem(item) && !/初期設定/.test(item.name);
     });
     if (!primaryItems.length) primaryItems = state.items.slice();
     var appNames = primaryItems.map(function(item) { return item.name; });
@@ -1683,6 +1758,9 @@
         tax: state.tax,
         discount: state.discount,
         total: state.total,
+        monthlySubtotal: state.monthlySubtotal || 0,
+        monthlyTax: state.monthlyTax || 0,
+        monthlyTotal: state.monthlyTotal || 0,
         items: state.items
       },
       customerMail: {
@@ -1775,20 +1853,28 @@
 
   function initProducts() {
     var tbody = document.getElementById("productRows");
-    tbody.innerHTML = PRODUCTS.map(function(p, i) {
+    var initialRows = [];
+    var monthlyRows = [];
+    PRODUCTS.forEach(function(p, i) {
       var options = "";
       for (var q = 0; q <= 10; q++) options += '<option value="' + q + '">' + q + "</option>";
       var qtyField = p.unit === "枚"
         ? '<input type="number" id="qty' + i + '" value="0" min="0" step="1" inputmode="numeric" oninput="updateTotal()">'
-        : '<select id="qty' + i + '" onchange="updateTotal()">' + options + "</select>";
-      return "<tr>" +
+        : '<select id="qty' + i + '" aria-label="' + escapeHtml(p.name) + 'の数量" onchange="updateTotal()">' + options + "</select>";
+      if (p.billing === "monthly") {
+        monthlyRows.push('<tr><td>' + escapeHtml(p.name) + '</td><td class="num">' + yen(p.priceEx) + '/月</td><td class="num">' + qtyField + '</td></tr>');
+        return;
+      }
+      initialRows.push("<tr>" +
         "<td>" + p.name + "</td>" +
         '<td class="unit-col">' + formatUnit(p.unit) + "</td>" +
         '<td class="num">' + p.workHours + "</td>" +
         '<td class="num">' + yen(p.priceEx) + "</td>" +
         '<td class="num">' + qtyField + "</td>" +
-        "</tr>";
-    }).join("");
+        "</tr>");
+    });
+    tbody.innerHTML = initialRows.join("");
+    document.getElementById("maintenanceRows").innerHTML = monthlyRows.join("");
   }
 
   function renderCustomProducts() {
@@ -1845,6 +1931,7 @@
         var tax = calcTax(unitEx * qty);
         items.push({
           name: p.name,
+          billing: p.billing || "one-time",
           unit: p.unit,
           qty: qty,
           unitEx: unitEx,
@@ -1859,6 +1946,7 @@
       var tax = calcTax(unitEx * p.qty);
       items.push({
         name: p.name,
+        billing: "one-time",
         unit: p.unit,
         qty: p.qty,
         unitEx: unitEx,
@@ -1871,18 +1959,13 @@
   }
 
   function updateTotal() {
-    var items = collectItems();
-    var subtotal = items.reduce(function(sum, item) { return sum + item.subtotalEx; }, 0);
-    var tax = items.reduce(function(sum, item) { return sum + item.tax; }, 0);
-    var discount = parseMoney(document.getElementById("discount").value);
-    if (discount < 0) discount = 0;
-    if (discount > subtotal) discount = subtotal;
-    var discountedSubtotal = subtotal - discount;
-    var discountedTax = calcTax(discountedSubtotal);
-    var total = discountedSubtotal + discountedTax;
-    document.getElementById("liveSubtotal").textContent = yen(discountedSubtotal);
-    document.getElementById("liveTax").textContent = yen(discountedTax);
-    document.getElementById("liveTotal").textContent = yen(total);
+    var totals = calculateTotals(collectItems(), parseMoney(document.getElementById("discount").value));
+    document.getElementById("liveSubtotal").textContent = yen(totals.subtotal);
+    document.getElementById("liveTax").textContent = yen(totals.tax);
+    document.getElementById("liveTotal").textContent = yen(totals.total);
+    document.getElementById("liveMonthlySubtotal").textContent = yen(totals.monthlySubtotal) + "/月";
+    document.getElementById("liveMonthlyTax").textContent = yen(totals.monthlyTax) + "/月";
+    document.getElementById("liveMonthlyTotal").textContent = yen(totals.monthlyTotal) + "/月";
   }
 
   function showScreen(n) {
@@ -1930,12 +2013,7 @@
       return;
     }
 
-    var subtotal = items.reduce(function(sum, item) { return sum + item.subtotalEx; }, 0);
-    if (discount < 0) discount = 0;
-    if (discount > subtotal) discount = subtotal;
-    var discountedSubtotal = subtotal - discount;
-    var tax = calcTax(discountedSubtotal);
-    var total = discountedSubtotal + tax;
+    var totals = calculateTotals(items, discount);
 
     state = {
       ctype: document.querySelector("input[name=ctype]:checked").value,
@@ -1945,10 +2023,13 @@
       email: email,
       payment: document.getElementById("payment").value,
       items: items,
-      subtotal: discountedSubtotal,
-      tax: tax,
-      discount: discount,
-      total: total,
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      discount: totals.discount,
+      total: totals.total,
+      monthlySubtotal: totals.monthlySubtotal,
+      monthlyTax: totals.monthlyTax,
+      monthlyTotal: totals.monthlyTotal,
       orderNo: "NSL-" + nowStamp(),
       customerNo: customerNoStamp()
     };
@@ -1999,12 +2080,22 @@
     document.getElementById("estDiscount").textContent = yenDiscount(state.discount);
     document.getElementById("estTotal").textContent = yen(state.total);
 
-    document.getElementById("estItems").innerHTML = state.items.map(function(item) {
+    document.getElementById("estItems").innerHTML = state.items.filter(function(item) { return !isMonthlyItem(item); }).map(function(item) {
       return "<tr><td>" + item.name + '</td><td class="unit-col">' + formatUnit(item.unit) + "</td>" +
         '<td class="num">' + item.qty + "</td>" +
         '<td class="num">' + yen(item.unitEx) + "</td>" +
         '<td class="num">' + yen(item.subtotalEx) + "</td></tr>";
     }).join("");
+
+    var monthlyItems = state.items.filter(isMonthlyItem);
+    document.getElementById("estMaintenanceSection").classList.toggle("hidden", !monthlyItems.length);
+    document.getElementById("estMaintenanceItems").innerHTML = monthlyItems.map(function(item) {
+      return '<tr><td>' + escapeHtml(item.name) + '</td><td class="num">' + item.qty +
+        '</td><td class="num">' + yen(item.unitEx) + '/月</td><td class="num">' + yen(item.subtotalEx) + '/月</td></tr>';
+    }).join("");
+    document.getElementById("estMonthlySubtotal").textContent = yen(state.monthlySubtotal || 0) + "/月";
+    document.getElementById("estMonthlyTax").textContent = yen(state.monthlyTax || 0) + "/月";
+    document.getElementById("estMonthlyTotal").textContent = yen(state.monthlyTotal || 0) + "/月";
 
     renderMailScreen("estimate");
   }
@@ -2046,7 +2137,9 @@
       "\n小計（税抜）: " + yen(state.subtotal) +
       "\n消費税: " + yen(state.tax) +
       "\n割引額（税抜）: " + yenDiscount(state.discount) +
-      "\n合計金額（税込）: " + yen(state.total) +
+      "\n初期費用合計（税込）: " + yen(state.total) +
+      "\n月額保守料（税抜）: " + yen(state.monthlySubtotal || 0) + "/月" +
+      "\n月額保守料（税込）: " + yen(state.monthlyTotal || 0) + "/月" +
       "\nファイル名: " + (isContract ? state.contractFileName : state.fileName);
 
     var previewType = isContract ? "'contract'" : "'estimate'";
@@ -2055,7 +2148,7 @@
 
     document.getElementById("orderRow").innerHTML =
       "<td>" + state.orderNo + "</td><td>" + state.customerNo + "</td><td>" + state.name + "</td>" +
-      "<td>" + itemSummary + "</td><td>" + yen(state.total) + "</td><td id=\"orderStatusCell\">新規受付</td><td class=\"link\">" + pdfLink + "</td>";
+      "<td>" + itemSummary + "</td><td>初期 " + yen(state.total) + "<br>月額 " + yen(state.monthlyTotal || 0) + "/月</td><td id=\"orderStatusCell\">新規受付</td><td class=\"link\">" + pdfLink + "</td>";
 
     document.getElementById("customerRow").innerHTML =
       "<td>" + state.customerNo + "</td><td>" + (state.company || "") + "</td><td>" + state.name + "</td>" +
@@ -2258,3 +2351,4 @@
 </script>
 </body>
 </html>
+
