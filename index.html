@@ -838,8 +838,8 @@
           <div class="maintenance-add-grid">
             <label>項目名<input type="text" id="maintenanceName" placeholder="例）追加サポート・クラウド利用料"></label>
             <label>入力通貨<select id="maintenanceCurrency"><option value="JPY">円（JPY）</option><option value="USD">ドル（USD）</option></select></label>
-            <label>月額単価（税抜）<input type="number" id="maintenanceAmount" min="0" step="0.01" placeholder="例）3000"></label>
-            <label>数量<input type="number" id="maintenanceQuantity" min="1" step="1" value="1"></label>
+            <label>月額単価（税抜）<input type="text" id="maintenanceAmount" inputmode="decimal" placeholder="例）3000"></label>
+            <label>数量<input type="text" id="maintenanceQuantity" inputmode="numeric" value="1"></label>
             <button type="button" class="mini-button" onclick="addMaintenanceProduct()">月額項目を追加</button>
           </div>
           <p class="note maintenance-error" id="maintenanceError" role="status"></p>
@@ -1167,6 +1167,10 @@
   function parseMoney(text) {
     var cleaned = String(text || "").replace(/[^\d-]/g, "");
     return cleaned ? Number(cleaned) : 0;
+  }
+
+  function normalizeNumericText(value) {
+    return String(value == null ? "" : value).normalize("NFKC").replace(/[,\s]/g, "");
   }
 
   function todayStr(sep) {
@@ -2068,11 +2072,14 @@
 
   function addMaintenanceProduct() {
     var name = document.getElementById("maintenanceName").value.trim();
-    var rawAmount = document.getElementById("maintenanceAmount").value;
+    var amountField = document.getElementById("maintenanceAmount");
+    var quantityField = document.getElementById("maintenanceQuantity");
+    var rawAmount = normalizeNumericText(amountField.value);
+    var rawQuantity = normalizeNumericText(quantityField.value);
     var amount = Number(rawAmount);
-    var qty = Number(document.getElementById("maintenanceQuantity").value);
+    var qty = Number(rawQuantity);
     var currency = document.getElementById("maintenanceCurrency").value;
-    if (!name || rawAmount === "" || !Number.isFinite(amount) || amount < 0 || !Number.isInteger(qty) || qty < 1 || (currency === "JPY" && !Number.isSafeInteger(amount))) {
+    if (!name || rawAmount === "" || rawQuantity === "" || !Number.isFinite(amount) || amount < 0 || !Number.isInteger(qty) || qty < 1 || (currency === "JPY" && !Number.isSafeInteger(amount))) {
       document.getElementById("maintenanceError").textContent = "項目名・0以上の月額単価・1以上の整数の数量を入力してください。円の単価は整数で入力してください。";
       return;
     }
@@ -2080,8 +2087,8 @@
     syncMaintenanceMoney(item);
     customProducts.push(item);
     document.getElementById("maintenanceName").value = "";
-    document.getElementById("maintenanceAmount").value = "";
-    document.getElementById("maintenanceQuantity").value = "1";
+    amountField.value = "";
+    quantityField.value = "1";
     document.getElementById("maintenanceError").textContent = "";
     renderCustomProducts();
     updateTotal();
