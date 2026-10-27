@@ -744,6 +744,11 @@
       </div>
 
       <div class="field">
+        <label for="phone">連絡先（電話番号）</label>
+        <input type="tel" id="phone" autocomplete="tel" placeholder="例）090-1234-5678">
+      </div>
+
+      <div class="field">
         <label>支払方法<span class="req">必須</span></label>
         <select id="payment">
           <option>銀行振込</option>
@@ -1076,6 +1081,7 @@
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
   var PERFORMANCE_APP_URL = "https://nsl-performance-app.nextsaleslab.chatgpt.site/";
   var customProducts = [];
+  var sourceCaseId = 0;
   var nslBaseDirectoryHandle = null;
   var DIRECTORY_DB_NAME = "nsl-document-storage";
   var DIRECTORY_STORE_NAME = "handles";
@@ -1170,6 +1176,10 @@
     var payload = {
       company: state.company || "",
       representative: state.name || "",
+      caseId: state.caseId || undefined,
+      address: state.address || "",
+      email: state.email || "",
+      phone: state.phone || "",
       appointmentDate: todayStr("-"),
       sales: "浅野",
       monthlySubtotal: state.monthlySubtotal || 0,
@@ -1189,12 +1199,16 @@
     params.set("tab", "cases");
     params.set("action", "new");
     params.set("source", "estimate");
-    if (payload.company) params.set("company", payload.company);
-    if (payload.representative) params.set("representative", payload.representative);
     params.set("appointmentDate", payload.appointmentDate);
     params.set("sales", payload.sales);
-    params.set("quote", encodeBase64UrlJson(payload));
-    return PERFORMANCE_APP_URL + "?" + params.toString();
+    // Keep existing integrations working while newer screens read the fragment.
+    var legacyPayload = Object.assign({}, payload);
+    delete legacyPayload.address;
+    delete legacyPayload.email;
+    delete legacyPayload.phone;
+    delete legacyPayload.caseId;
+    params.set("quote", encodeBase64UrlJson(legacyPayload));
+    return PERFORMANCE_APP_URL + "?" + params.toString() + "#quote=" + encodeBase64UrlJson(payload);
   }
 
   function openPerformanceApp() {
@@ -1753,6 +1767,8 @@
         company: state.company,
         name: state.name,
         email: state.email,
+        address: state.address || "",
+        phone: state.phone || "",
         payment: state.payment,
         subtotal: state.subtotal,
         tax: state.tax,
@@ -1835,11 +1851,21 @@
   function applyUrlPrefill() {
     var search = window.location.search.replace(/\\&/g, "&").replace(/&amp;/g, "&");
     var params = new URLSearchParams(search);
-    var ctype = normalizeCtype(params.get("ctype"));
-    var company = (params.get("company") || "").trim();
-    var name = (params.get("name") || "").trim();
-    var email = (params.get("email") || "").trim();
-    var address = (params.get("address") || "").trim();
+    var customer = {};
+    try {
+      var raw = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("customer");
+      if (raw) {
+        var binary = atob(raw.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - raw.length % 4) % 4));
+        customer = JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, function(char) { return char.charCodeAt(0); }))) || {};
+      }
+    } catch (error) { customer = {}; }
+    sourceCaseId = Number(customer.caseId || params.get("caseId")) || 0;
+    var ctype = normalizeCtype(customer.ctype || params.get("ctype"));
+    var company = String(customer.company || params.get("company") || "").trim();
+    var name = String(customer.name || params.get("name") || "").trim();
+    var email = String(customer.email || params.get("email") || "").trim();
+    var address = String(customer.address || params.get("address") || "").trim();
+    var phone = String(customer.phone || params.get("phone") || "").trim();
 
     if (ctype) {
       var radio = document.querySelector('input[name="ctype"][value="' + ctype + '"]');
@@ -1849,6 +1875,7 @@
     if (name) document.getElementById("name").value = name;
     if (email) document.getElementById("email").value = email;
     if (address) document.getElementById("address").value = address;
+    if (phone) document.getElementById("phone").value = phone;
   }
 
   function initProducts() {
@@ -2022,6 +2049,8 @@
       address: document.getElementById("address").value.trim(),
       email: email,
       payment: document.getElementById("payment").value,
+      phone: document.getElementById("phone").value.trim(),
+      caseId: sourceCaseId || undefined,
       items: items,
       subtotal: totals.subtotal,
       tax: totals.tax,
@@ -2132,6 +2161,7 @@
       "\n会社名・店舗名: " + (state.company || "（なし）") +
       "\nご担当者名: " + state.name +
       "\nメールアドレス: " + state.email +
+      "\n連絡先: " + (state.phone || "（未入力）") +
       "\n支払方法: " + state.payment +
       "\nご依頼内容: " + itemSummary +
       "\n小計（税抜）: " + yen(state.subtotal) +
@@ -2324,6 +2354,8 @@
     document.getElementById("name").value = "";
     document.getElementById("address").value = "";
     document.getElementById("email").value = "";
+    document.getElementById("phone").value = "";
+    sourceCaseId = 0;
     document.getElementById("discount").value = "0";
     customProducts = [];
     PRODUCTS.forEach(function(_, i) { document.getElementById("qty" + i).value = 0; });
