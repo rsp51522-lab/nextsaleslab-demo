@@ -240,6 +240,32 @@
   .quote-edit-row { display:grid; grid-template-columns:minmax(160px,2fr) 70px 100px 90px 110px 70px; gap:8px; align-items:end; padding:12px; border:1px solid var(--border); border-radius:8px; }
   .quote-edit-row label { display:grid; gap:4px; font-size:12px; }
   .quote-edit-row input, .quote-edit-row select { width:100%; box-sizing:border-box; min-width:0; padding:9px; border:1px solid var(--border); border-radius:6px; font:inherit; }
+  .maintenance-scroll { overflow-x:auto; }
+  .maintenance-table { min-width:700px; }
+  .maintenance-table th:first-child { width:44%; }
+  .maintenance-table input { width:100%; box-sizing:border-box; min-width:75px; border:1px solid var(--border); border-radius:6px; padding:9px; font:inherit; }
+  .maintenance-table input[type=number] { text-align:right; }
+  .maintenance-table input[type=text] { min-width:235px; }
+  .maintenance-rate { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; }
+  .maintenance-rate input { width:100px; padding:9px; border:1px solid var(--border); border-radius:6px; font:inherit; }
+  .maintenance-add-grid { display:grid; grid-template-columns:2fr 100px 1fr 80px auto; gap:10px; align-items:end; }
+  .maintenance-add-grid label { display:grid; gap:5px; font-size:13px; }
+  .maintenance-add-grid input, .maintenance-add-grid select { width:100%; box-sizing:border-box; padding:10px; border:1px solid var(--border); border-radius:6px; font:inherit; }
+  .maintenance-error { color:#b91c1c; }
+  .usd-reference { display:block; font-size:11px; font-weight:normal; color:#596579; }
+  @media(max-width:700px) { .maintenance-add-grid {grid-template-columns:1fr 1fr;} .maintenance-add-grid label:first-child {grid-column:1 / -1;} }
+  @media(max-width:700px) {
+    .maintenance-scroll {overflow:visible;}
+    .maintenance-table {display:block;min-width:0;}
+    .maintenance-table thead {display:none;}
+    .maintenance-table tbody {display:grid;gap:10px;}
+    .maintenance-table tr {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;padding:6px;}
+    .maintenance-table td {border:0;padding:6px;min-width:0;}
+    .maintenance-table td:first-child {grid-column:1 / -1;}
+    .maintenance-table td:last-child:nth-child(5) {grid-column:1 / -1;text-align:right;}
+    .maintenance-table td::before {content:attr(data-label);display:block;font-size:11px;color:#596579;margin-bottom:5px;}
+    .maintenance-table input, .maintenance-table input[type=text] {min-width:0;}
+  }
   @media(max-width:700px) { .quote-edit-row {grid-template-columns:1fr 1fr;} .quote-edit-row label:first-child {grid-column:1 / -1;} }
   .remove-btn {
     border: 1px solid #ef4444;
@@ -798,11 +824,27 @@
 
       <div class="field">
         <label>月額保守料（数量を選択）</label>
-        <p class="note">必要な保守プランの数量を選択してください。制作費とは別に毎月発生する料金です。</p>
-        <table class="products">
-          <thead><tr><th>保守プラン</th><th class="num">月額単価（税抜）</th><th class="num">数量</th></tr></thead>
+        <p class="note">必要な項目の数量を選択してください。項目名・月額料金は直接修正できます。制作費とは別に毎月発生する料金です。</p>
+        <label class="maintenance-rate" for="maintenanceExchangeRate">換算レート：1ドル＝<input type="number" id="maintenanceExchangeRate" aria-label="換算レート（1ドルあたりの円）" min="0.01" step="0.01" value="150" oninput="updateMaintenanceRate(this.value)">円</label>
+        <p class="note">円の金額を見積に反映します。ドル・円のどちらを修正しても相互に換算します。換算レートは見積用の設定値です。</p>
+        <div class="maintenance-scroll"><table class="products maintenance-table">
+          <thead><tr><th>保守プラン・サービス</th><th class="num">月額単価（ドル・税抜）</th><th class="num">月額単価（円・税抜）</th><th class="num">数量</th></tr></thead>
           <tbody id="maintenanceRows"></tbody>
-        </table>
+        </table></div>
+        <p class="note">クラウドサービスは基本料金の目安です。Vercel Pro・GitHub Teamは1名分、Supabase Proは1プロジェクト分です。GitHub Teamの表示料金は初年度の価格です。従量料金・追加利用分は必要に応じて追加してください。</p>
+        <p class="note">料金確認日：2026/10/27　公式料金：<a href="https://vercel.com/pricing" target="_blank" rel="noopener noreferrer">Vercel</a> ／ <a href="https://github.com/pricing" target="_blank" rel="noopener noreferrer">GitHub</a> ／ <a href="https://supabase.com/pricing" target="_blank" rel="noopener noreferrer">Supabase</a></p>
+        <div class="custom-product-box">
+          <h3>月額保守料を追加</h3>
+          <div class="maintenance-add-grid">
+            <label>項目名<input type="text" id="maintenanceName" placeholder="例）追加サポート・クラウド利用料"></label>
+            <label>入力通貨<select id="maintenanceCurrency"><option value="JPY">円（JPY）</option><option value="USD">ドル（USD）</option></select></label>
+            <label>月額単価（税抜）<input type="number" id="maintenanceAmount" min="0" step="0.01" placeholder="例）3000"></label>
+            <label>数量<input type="number" id="maintenanceQuantity" min="1" step="1" value="1"></label>
+            <button type="button" class="mini-button" onclick="addMaintenanceProduct()">月額項目を追加</button>
+          </div>
+          <p class="note maintenance-error" id="maintenanceError" role="status"></p>
+          <div id="customMaintenanceList"></div>
+        </div>
       </div>
 
       <div class="summary-box">
@@ -907,7 +949,7 @@
             <div><span>月額消費税（10%）</span><span id="estMonthlyTax"></span></div>
             <div class="grand"><span>月額保守料（税込）</span><span id="estMonthlyTotal"></span></div>
           </div>
-          <p class="est-note">月額保守料は初期費用とは別に毎月発生します。</p>
+          <p class="est-note" id="estMaintenanceNote">月額保守料は初期費用とは別に毎月発生します。</p>
         </div>
 
         <div class="est-note"></div>
@@ -1084,8 +1126,17 @@
     { code: "NSL038", name: "公式LINE", unit: "件", workHours: "", priceEx: 30000 },
     { code: "NSLM001", name: "月額保守料（アフターのみ）", unit: "件", billing: "monthly", workHours: "", priceEx: 2000 },
     { code: "NSLM002", name: "月額保守料（小規模：Xサーバー・SQL）", unit: "件", billing: "monthly", workHours: "", priceEx: 4000 },
-    { code: "NSLM003", name: "月額保守料（中規模：Vercel・Supabase）", unit: "件", billing: "monthly", workHours: "", priceEx: 5000 }
+    { code: "NSLM003", name: "月額保守料（中規模：Vercel・Supabase）", unit: "件", billing: "monthly", workHours: "", priceEx: 5000 },
+    { code: "CLOUD001", name: "月額保守料（Vercel Hobby・個人非商用）", unit: "件", billing: "monthly", priceEx: 0, usdEx: 0, currency: "USD" },
+    { code: "CLOUD002", name: "月額保守料（Vercel Pro・1名）", unit: "人", billing: "monthly", priceEx: 3000, usdEx: 20, currency: "USD" },
+    { code: "CLOUD003", name: "月額保守料（GitHub Free）", unit: "件", billing: "monthly", priceEx: 0, usdEx: 0, currency: "USD" },
+    { code: "CLOUD004", name: "月額保守料（GitHub Team・1名・初年度）", unit: "人", billing: "monthly", priceEx: 600, usdEx: 4, currency: "USD" },
+    { code: "CLOUD005", name: "月額保守料（Supabase Free）", unit: "件", billing: "monthly", priceEx: 0, usdEx: 0, currency: "USD" },
+    { code: "CLOUD006", name: "月額保守料（Supabase Pro・1プロジェクト）", unit: "件", billing: "monthly", priceEx: 3750, usdEx: 25, currency: "USD" },
+    { code: "CLOUD007", name: "月額保守料（Supabase 追加プロジェクト・Micro）", unit: "件", billing: "monthly", priceEx: 1500, usdEx: 10, currency: "USD" }
   ];
+  var originalProducts = JSON.parse(JSON.stringify(PRODUCTS));
+  var maintenanceExchangeRate = 150;
   var TAX_RATE = 0.1;
   var TOOLBOX_HOME_BASE = "https://rsp51522-lab.github.io/nextsaleslab-demo/?mode=toolbox";
   var PERFORMANCE_APP_URL = "https://nsl-performance-app.nextsaleslab.chatgpt.site/";
@@ -1110,6 +1161,7 @@
   var state = {};
 
   function yen(n) { return "¥" + Number(n).toLocaleString("ja-JP"); }
+  function usd(n) { return "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 }); }
   function yenDiscount(n) { return "-" + yen(n); }
   function pad(n, len) { return String(n).padStart(len, "0"); }
   function parseMoney(text) {
@@ -1210,8 +1262,8 @@
     params.set("action", "new");
     params.set("source", "estimate");
     if (sourceRevision) {
-      var toLine = function(item) { return {name:item.name, unit:item.unit, quantity:String(item.qty), priceEx:item.unitEx, amountEx:item.subtotalEx}; };
-      payload.revision = { slot:sourceRevision.slot, basis:sourceRevision.basis, quote:{items:state.items.filter(function(item){return !isMonthlyItem(item);}).map(toLine), monthlyItems:state.items.filter(isMonthlyItem).map(toLine), subtotal:state.subtotal, tax:state.tax, total:state.total, monthlySubtotal:state.monthlySubtotal, monthlyTax:state.monthlyTax, monthlyTotal:state.monthlyTotal, discount:state.discount, payment:state.payment} };
+      var toLine = function(item) { return Object.assign({name:item.name, unit:item.unit, quantity:String(item.qty), priceEx:item.unitEx, amountEx:item.subtotalEx}, isMonthlyItem(item) ? {usdEx:item.usdEx,exchangeRate:item.exchangeRate,currency:item.currency} : {}); };
+      payload.revision = { slot:sourceRevision.slot, basis:sourceRevision.basis, quote:{items:state.items.filter(function(item){return !isMonthlyItem(item);}).map(toLine), monthlyItems:state.items.filter(isMonthlyItem).map(toLine), subtotal:state.subtotal, tax:state.tax, total:state.total, monthlySubtotal:state.monthlySubtotal, monthlyTax:state.monthlyTax, monthlyTotal:state.monthlyTotal, discount:state.discount, payment:state.payment, exchangeRate:maintenanceExchangeRate} };
       params.set("action", "revise");
       return PERFORMANCE_APP_URL + "?" + params.toString() + "#quote=" + encodeBase64UrlJson(payload);
     }
@@ -1902,10 +1954,13 @@
     var restoreLine = function(item, billing) {
       var qty = Number(item.quantity == null ? item.qty : item.quantity) || 1;
       var price = Number(item.priceEx == null ? item.unitEx : item.priceEx) || 0;
-      customProducts.push({name:String(item.name || "制作・サービス一式"), unit:String(item.unit || "件"), qty:qty, priceEx:price, billing:billing});
+      customProducts.push({name:String(item.name || "制作・サービス一式"), unit:String(item.unit || "件"), qty:qty, priceEx:price, billing:billing, usdEx:item.usdEx, currency:item.currency || "JPY"});
     };
     estimate.items.forEach(function(item){restoreLine(item,"one-time");});
     var monthlyItems = Array.isArray(estimate.monthlyItems) ? estimate.monthlyItems : [];
+    var savedRate = Number(estimate.exchangeRate || (monthlyItems[0] && monthlyItems[0].exchangeRate));
+    if (savedRate > 0 && Number.isFinite(savedRate)) maintenanceExchangeRate = savedRate;
+    document.getElementById("maintenanceExchangeRate").value = maintenanceExchangeRate;
     monthlyItems.forEach(function(item){restoreLine(item,"monthly");});
     if (!monthlyItems.length && Number(estimate.monthlySubtotal) > 0) restoreLine({name:"月額保守料（登録済み）",quantity:1,priceEx:estimate.monthlySubtotal},"monthly");
     var initial = customProducts.filter(function(item){return item.billing !== "monthly";}).reduce(function(sum,item){return sum + item.priceEx * item.qty;},0);
@@ -1916,6 +1971,7 @@
     document.querySelector("#screen1 h2").textContent = "見積もり修正";
     document.querySelector("#screen1 button[onclick='submitOrder()']").textContent = "修正した内容で見積書を再作成する";
     document.getElementById("quoteEditNote").textContent = (sourceRevision.slot === "見積PDF" ? "基本見積" : sourceRevision.slot.replace("PDF", "")) + "の明細を読み込みました。項目名・単価・数量を修正できます。ほかの追加見積や手動追加項目は実績管理に残ります。";
+    renderMaintenanceRows();
   }
 
   function initProducts() {
@@ -1929,7 +1985,7 @@
         ? '<input type="number" id="qty' + i + '" value="0" min="0" step="1" inputmode="numeric" oninput="updateTotal()">'
         : '<select id="qty' + i + '" aria-label="' + escapeHtml(p.name) + 'の数量" onchange="updateTotal()">' + options + "</select>";
       if (p.billing === "monthly") {
-        monthlyRows.push('<tr><td>' + escapeHtml(p.name) + '</td><td class="num">' + yen(p.priceEx) + '/月</td><td class="num">' + qtyField + '</td></tr>');
+        monthlyRows.push(maintenanceRow(p, i, false));
         return;
       }
       initialRows.push("<tr>" +
@@ -1944,23 +2000,113 @@
     document.getElementById("maintenanceRows").innerHTML = monthlyRows.join("");
   }
 
+  function roundUsd(value) { return Math.round(Number(value) * 100) / 100; }
+
+  function syncMaintenanceMoney(item) {
+    if (item.currency === "USD" && Number.isFinite(Number(item.usdEx))) {
+      item.usdEx = Math.max(0, Number(item.usdEx));
+      item.priceEx = Math.round(item.usdEx * maintenanceExchangeRate);
+    } else {
+      item.currency = "JPY";
+      item.priceEx = Math.max(0, Math.round(Number(item.priceEx) || 0));
+      item.usdEx = roundUsd(item.priceEx / maintenanceExchangeRate);
+    }
+    return {usdEx:item.usdEx, exchangeRate:maintenanceExchangeRate, currency:item.currency};
+  }
+
+  function maintenanceRow(item, index, custom) {
+    syncMaintenanceMoney(item);
+    var kind = custom ? "custom" : "standard";
+    var handler = function(key) { return 'updateMaintenanceProduct(' + index + ',\'' + key + '\',this.value,' + custom + ')'; };
+    var input = function(key, value, type, label) {
+      return '<input id="maintenance-' + key + '-' + kind + '-' + index + '" aria-label="' + escapeHtml(item.name + ' ' + label) + '" type="' + type + '" ' + (type === "number" ? 'min="0" step="' + (key === "usdEx" ? '0.01' : '1') + '" ' : '') + 'value="' + escapeHtml(value) + '" oninput="' + handler(key) + '">';
+    };
+    var quantity = '<input id="' + (custom ? 'maintenance-qty-custom-' : 'qty') + index + '" aria-label="' + escapeHtml(item.name + 'の数量') + '" type="number" min="' + (custom ? '1' : '0') + '" step="1" value="' + (custom ? item.qty : 0) + '" oninput="' + handler("qty") + '">';
+    return '<tr><td data-label="保守プラン・サービス">' + input("name",item.name,"text","項目名") + '</td><td data-label="月額ドル（税抜）">' + input("usdEx",item.usdEx,"number","月額ドル") + '</td><td data-label="月額円（税抜）">' + input("priceEx",item.priceEx,"number","月額円") + '</td><td data-label="数量">' + quantity + '</td>' + (custom ? '<td><button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button></td>' : '') + '</tr>';
+  }
+
+  function renderMaintenanceRows() {
+    var quantities = {};
+    PRODUCTS.forEach(function(item,index) { if (item.billing === "monthly") { var field = document.getElementById("qty" + index); quantities[index] = field ? field.value : 0; } });
+    document.getElementById("maintenanceRows").innerHTML = PRODUCTS.map(function(item,index) {return item.billing === "monthly" ? maintenanceRow(item,index,false) : "";}).join("");
+    Object.keys(quantities).forEach(function(index){document.getElementById("qty" + index).value = quantities[index];});
+    renderCustomMaintenance();
+  }
+
+  function renderCustomMaintenance() {
+    var rows = customProducts.map(function(item,index){return item.billing === "monthly" ? maintenanceRow(item,index,true) : "";}).join("");
+    document.getElementById("customMaintenanceList").innerHTML = rows ? '<div class="maintenance-scroll"><table class="products maintenance-table"><thead><tr><th>月額項目（修正できます）</th><th>月額ドル</th><th>月額円</th><th>数量</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="note">追加月額項目はまだありません。</p>';
+  }
+
+  function updateMaintenanceProduct(index, key, value, custom) {
+    var item = (custom ? customProducts : PRODUCTS)[index];
+    if (!item) return;
+    if (key === "name") item.name = value;
+    else if (key === "qty") item.qty = Math.max(0, Math.floor(Number(value) || 0));
+    else {
+      var amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0) { document.getElementById("maintenanceError").textContent = "月額料金は0以上の数値を入力してください。"; return; }
+      item[key] = key === "priceEx" ? Math.round(amount) : roundUsd(amount);
+      item.currency = key === "usdEx" ? "USD" : "JPY";
+      syncMaintenanceMoney(item);
+      var other = key === "usdEx" ? "priceEx" : "usdEx";
+      var field = document.getElementById("maintenance-" + other + "-" + (custom ? "custom" : "standard") + "-" + index);
+      if (field) field.value = item[other];
+    }
+    document.getElementById("maintenanceError").textContent = "";
+    updateTotal();
+  }
+
+  function updateMaintenanceRate(value) {
+    var rate = Number(value);
+    if (!Number.isFinite(rate) || rate <= 0) { document.getElementById("maintenanceError").textContent = "換算レートは0より大きい数値を入力してください。"; return; }
+    maintenanceExchangeRate = rate;
+    document.getElementById("maintenanceError").textContent = "";
+    renderMaintenanceRows();
+    updateTotal();
+  }
+
+  function addMaintenanceProduct() {
+    var name = document.getElementById("maintenanceName").value.trim();
+    var rawAmount = document.getElementById("maintenanceAmount").value;
+    var amount = Number(rawAmount);
+    var qty = Number(document.getElementById("maintenanceQuantity").value);
+    var currency = document.getElementById("maintenanceCurrency").value;
+    if (!name || rawAmount === "" || !Number.isFinite(amount) || amount < 0 || !Number.isInteger(qty) || qty < 1 || (currency === "JPY" && !Number.isSafeInteger(amount))) {
+      document.getElementById("maintenanceError").textContent = "項目名・0以上の月額単価・1以上の整数の数量を入力してください。円の単価は整数で入力してください。";
+      return;
+    }
+    var item = {name:name,unit:"件",qty:qty,billing:"monthly",priceEx:currency === "JPY" ? amount : 0,usdEx:currency === "USD" ? roundUsd(amount) : undefined,currency:currency};
+    syncMaintenanceMoney(item);
+    customProducts.push(item);
+    document.getElementById("maintenanceName").value = "";
+    document.getElementById("maintenanceAmount").value = "";
+    document.getElementById("maintenanceQuantity").value = "1";
+    document.getElementById("maintenanceError").textContent = "";
+    renderCustomProducts();
+    updateTotal();
+  }
+
   function renderCustomProducts() {
+    renderCustomMaintenance();
     var list = document.getElementById("customProductList");
     if (sourceRevision) {
       list.innerHTML = "";
       document.getElementById("restoredProductList").innerHTML = customProducts.map(function(item,index) {
+        if (item.billing === "monthly") return "";
         var input = function(label,key,value,type) { return '<label>' + label + '<input aria-label="明細' + (index+1) + ' ' + label + '" type="' + type + '" ' + (type === "number" ? 'min="0" step="any" ' : '') + 'value="' + escapeHtml(value) + '" oninput="updateCustomProduct(' + index + ',\'' + key + '\',this.value)"></label>'; };
         return '<div class="quote-edit-row">' + input("項目名","name",item.name,"text") + input("単位","unit",item.unit,"text") + input("税抜単価","priceEx",item.priceEx,"number") + input("数量","qty",item.qty,"number") + '<label>料金区分<select aria-label="明細' + (index+1) + ' 料金区分" onchange="updateCustomProduct(' + index + ',\'billing\',this.value)"><option value="one-time"' + (item.billing !== "monthly" ? ' selected' : '') + '>初期費用</option><option value="monthly"' + (item.billing === "monthly" ? ' selected' : '') + '>月額保守料</option></select></label><button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button></div>';
       }).join("");
       return;
     }
-    if (!customProducts.length) {
+    if (!customProducts.some(function(item){return item.billing !== "monthly";})) {
       list.innerHTML = '<div class="note">追加商品はまだありません。</div>';
       return;
     }
     list.innerHTML = customProducts.map(function(item, index) {
+      if (item.billing === "monthly") return "";
       return '<div class="custom-row">' +
-        "<strong>" + item.name + "</strong>" +
+        "<strong>" + escapeHtml(item.name) + "</strong>" +
         "<span>" + formatUnit(item.unit) + "</span>" +
         '<span class="num">' + yen(item.priceEx) + "</span>" +
         '<span>数量 ' + item.qty + "</span>" +
@@ -1972,6 +2118,7 @@
   function updateCustomProduct(index, key, value) {
     if (!customProducts[index]) return;
     customProducts[index][key] = key === "priceEx" || key === "qty" ? Math.max(0, Number(value) || 0) : value;
+    if (key === "billing") renderCustomProducts();
     updateTotal();
   }
 
@@ -2008,9 +2155,10 @@
     PRODUCTS.forEach(function(p, i) {
       var qty = Math.max(0, Math.floor(Number(document.getElementById("qty" + i).value) || 0));
       if (qty > 0) {
+        if (p.billing === "monthly") syncMaintenanceMoney(p);
         var unitEx = p.priceEx;
         var tax = calcTax(unitEx * qty);
-        items.push({
+        items.push(Object.assign({
           name: p.name,
           billing: p.billing || "one-time",
           unit: p.unit,
@@ -2019,22 +2167,24 @@
           subtotalEx: unitEx * qty,
           tax: tax,
           subtotalIncl: unitEx * qty + tax
-        });
+        }, p.billing === "monthly" ? syncMaintenanceMoney(p) : {}));
       }
     });
     customProducts.forEach(function(p) {
+      if (p.billing === "monthly") syncMaintenanceMoney(p);
       var unitEx = p.priceEx;
-      var tax = calcTax(unitEx * p.qty);
-      items.push({
+      var subtotalEx = Math.round(unitEx * p.qty);
+      var tax = calcTax(subtotalEx);
+      items.push(Object.assign({
         name: p.name,
         billing: p.billing || "one-time",
         unit: p.unit,
         qty: p.qty,
         unitEx: unitEx,
-        subtotalEx: unitEx * p.qty,
+        subtotalEx: subtotalEx,
         tax: tax,
-        subtotalIncl: unitEx * p.qty + tax
-      });
+        subtotalIncl: subtotalEx + tax
+      }, p.billing === "monthly" ? syncMaintenanceMoney(p) : {}));
     });
     return items;
   }
@@ -2084,6 +2234,10 @@
     var items = collectItems();
     var discount = parseMoney(document.getElementById("discount").value);
     var problems = [];
+    if (items.some(function(item){return !String(item.name || "").trim() || !Number.isSafeInteger(item.unitEx) || item.unitEx < 0;})) problems.push("項目名・税抜単価");
+    var rateInput = Number(document.getElementById("maintenanceExchangeRate").value);
+    if (!Number.isFinite(rateInput) || rateInput <= 0) problems.push("月額保守料の換算レート");
+    if (document.querySelectorAll && Array.from(document.querySelectorAll(".maintenance-table input")).some(function(input){return !input.checkValidity();})) problems.push("月額料金・数量");
     if (customProducts.some(function(item){return !String(item.name).trim() || !(Number(item.qty)>0) || !Number.isSafeInteger(Number(item.priceEx)) || Number(item.priceEx)<0;})) problems.push("見積明細の項目名・単価・数量");
 
     if (!name) problems.push("ご担当者名");
@@ -2114,6 +2268,7 @@
       monthlySubtotal: totals.monthlySubtotal,
       monthlyTax: totals.monthlyTax,
       monthlyTotal: totals.monthlyTotal,
+      exchangeRate: maintenanceExchangeRate,
       orderNo: "NSL-" + nowStamp(),
       customerNo: customerNoStamp()
     };
@@ -2175,11 +2330,13 @@
     document.getElementById("estMaintenanceSection").classList.toggle("hidden", !monthlyItems.length);
     document.getElementById("estMaintenanceItems").innerHTML = monthlyItems.map(function(item) {
       return '<tr><td>' + escapeHtml(item.name) + '</td><td class="num">' + item.qty +
-        '</td><td class="num">' + yen(item.unitEx) + '/月</td><td class="num">' + yen(item.subtotalEx) + '/月</td></tr>';
+        '</td><td class="num">' + yen(item.unitEx) + '/月</td><td class="num">' + yen(item.subtotalEx) + '/月' +
+        (Number.isFinite(Number(item.usdEx)) ? '<small class="usd-reference">（ドル単価 ' + usd(item.usdEx) + '・合計 ' + usd(item.usdEx * item.qty) + '/月・' + (item.currency === "USD" ? "ドル基準" : "円基準") + '）</small>' : '') + '</td></tr>';
     }).join("");
     document.getElementById("estMonthlySubtotal").textContent = yen(state.monthlySubtotal || 0) + "/月";
     document.getElementById("estMonthlyTax").textContent = yen(state.monthlyTax || 0) + "/月";
     document.getElementById("estMonthlyTotal").textContent = yen(state.monthlyTotal || 0) + "/月";
+    document.getElementById("estMaintenanceNote").textContent = "月額保守料は初期費用とは別に毎月発生します。ドル表示は税抜・1ドル＝" + (state.exchangeRate || maintenanceExchangeRate) + "円で換算。円の金額を見積金額とします。";
 
     renderMailScreen("estimate");
   }
@@ -2407,6 +2564,9 @@
   function resetDemo() {
     sourceRevision = null;
     sourceCaseId = 0;
+    maintenanceExchangeRate = 150;
+    PRODUCTS = JSON.parse(JSON.stringify(originalProducts));
+    document.getElementById("maintenanceExchangeRate").value = "150";
     document.getElementById("quoteEditPanel").hidden = true;
     document.getElementById("restoredProductList").innerHTML = "";
     document.querySelector("#screen1 h2").textContent = "サービス注文フォーム";
@@ -2418,7 +2578,7 @@
     document.getElementById("phone").value = "";
     document.getElementById("discount").value = "0";
     customProducts = [];
-    PRODUCTS.forEach(function(_, i) { document.getElementById("qty" + i).value = 0; });
+    initProducts();
     renderCustomProducts();
     updateTotal();
     state = {};
