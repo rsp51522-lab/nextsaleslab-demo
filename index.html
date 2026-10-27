@@ -237,6 +237,10 @@
     font-size: 13px;
   }
   .custom-row strong { color: var(--main-dark); }
+  .quote-edit-row { display:grid; grid-template-columns:minmax(160px,2fr) 70px 100px 90px 110px 70px; gap:8px; align-items:end; padding:12px; border:1px solid var(--border); border-radius:8px; }
+  .quote-edit-row label { display:grid; gap:4px; font-size:12px; }
+  .quote-edit-row input, .quote-edit-row select { width:100%; box-sizing:border-box; min-width:0; padding:9px; border:1px solid var(--border); border-radius:6px; font:inherit; }
+  @media(max-width:700px) { .quote-edit-row {grid-template-columns:1fr 1fr;} .quote-edit-row label:first-child {grid-column:1 / -1;} }
   .remove-btn {
     border: 1px solid #ef4444;
     border-radius: 8px;
@@ -757,6 +761,11 @@
         </select>
       </div>
 
+      <div class="field" id="quoteEditPanel" hidden>
+        <h3>見積もり修正</h3>
+        <p class="note" id="quoteEditNote">保存済みの明細を読み込みました。項目名・単価・数量を修正できます。新しい項目は下の商品一覧から追加できます。</p>
+        <div class="custom-list" id="restoredProductList"></div>
+      </div>
       <div class="field">
         <label>制作・サービス項目（数量を選択）<span class="req">1点以上</span></label>
         <table class="products">
@@ -1082,6 +1091,7 @@
   var PERFORMANCE_APP_URL = "https://nsl-performance-app.nextsaleslab.chatgpt.site/";
   var customProducts = [];
   var sourceCaseId = 0;
+  var sourceRevision = null;
   var nslBaseDirectoryHandle = null;
   var DIRECTORY_DB_NAME = "nsl-document-storage";
   var DIRECTORY_STORE_NAME = "handles";
@@ -1199,6 +1209,12 @@
     params.set("tab", "cases");
     params.set("action", "new");
     params.set("source", "estimate");
+    if (sourceRevision) {
+      var toLine = function(item) { return {name:item.name, unit:item.unit, quantity:String(item.qty), priceEx:item.unitEx, amountEx:item.subtotalEx}; };
+      payload.revision = { slot:sourceRevision.slot, basis:sourceRevision.basis, quote:{items:state.items.filter(function(item){return !isMonthlyItem(item);}).map(toLine), monthlyItems:state.items.filter(isMonthlyItem).map(toLine), subtotal:state.subtotal, tax:state.tax, total:state.total, monthlySubtotal:state.monthlySubtotal, monthlyTax:state.monthlyTax, monthlyTotal:state.monthlyTotal, discount:state.discount, payment:state.payment} };
+      params.set("action", "revise");
+      return PERFORMANCE_APP_URL + "?" + params.toString() + "#quote=" + encodeBase64UrlJson(payload);
+    }
     params.set("appointmentDate", payload.appointmentDate);
     params.set("sales", payload.sales);
     // Keep existing integrations working while newer screens read the fragment.
@@ -1876,6 +1892,30 @@
     if (email) document.getElementById("email").value = email;
     if (address) document.getElementById("address").value = address;
     if (phone) document.getElementById("phone").value = phone;
+    if (customer.estimate && customer.estimate.mode === "revise") restoreEstimateForEdit(customer.estimate);
+  }
+
+  function restoreEstimateForEdit(estimate) {
+    if (!Array.isArray(estimate.items)) return;
+    sourceRevision = {slot:estimate.slot || "見積PDF", basis:String(estimate.basis || "")};
+    customProducts = [];
+    var restoreLine = function(item, billing) {
+      var qty = Number(item.quantity == null ? item.qty : item.quantity) || 1;
+      var price = Number(item.priceEx == null ? item.unitEx : item.priceEx) || 0;
+      customProducts.push({name:String(item.name || "制作・サービス一式"), unit:String(item.unit || "件"), qty:qty, priceEx:price, billing:billing});
+    };
+    estimate.items.forEach(function(item){restoreLine(item,"one-time");});
+    var monthlyItems = Array.isArray(estimate.monthlyItems) ? estimate.monthlyItems : [];
+    monthlyItems.forEach(function(item){restoreLine(item,"monthly");});
+    if (!monthlyItems.length && Number(estimate.monthlySubtotal) > 0) restoreLine({name:"月額保守料（登録済み）",quantity:1,priceEx:estimate.monthlySubtotal},"monthly");
+    var initial = customProducts.filter(function(item){return item.billing !== "monthly";}).reduce(function(sum,item){return sum + item.priceEx * item.qty;},0);
+    var discount = Math.max(0, initial - (Number(estimate.subtotal) || 0));
+    document.getElementById("discount").value = discount;
+    if (estimate.payment) document.getElementById("payment").value = estimate.payment;
+    document.getElementById("quoteEditPanel").hidden = false;
+    document.querySelector("#screen1 h2").textContent = "見積もり修正";
+    document.querySelector("#screen1 button[onclick='submitOrder()']").textContent = "修正した内容で見積書を再作成する";
+    document.getElementById("quoteEditNote").textContent = (sourceRevision.slot === "見積PDF" ? "基本見積" : sourceRevision.slot.replace("PDF", "")) + "の明細を読み込みました。項目名・単価・数量を修正できます。ほかの追加見積や手動追加項目は実績管理に残ります。";
   }
 
   function initProducts() {
@@ -1906,6 +1946,14 @@
 
   function renderCustomProducts() {
     var list = document.getElementById("customProductList");
+    if (sourceRevision) {
+      list.innerHTML = "";
+      document.getElementById("restoredProductList").innerHTML = customProducts.map(function(item,index) {
+        var input = function(label,key,value,type) { return '<label>' + label + '<input aria-label="明細' + (index+1) + ' ' + label + '" type="' + type + '" ' + (type === "number" ? 'min="0" step="any" ' : '') + 'value="' + escapeHtml(value) + '" oninput="updateCustomProduct(' + index + ',\'' + key + '\',this.value)"></label>'; };
+        return '<div class="quote-edit-row">' + input("項目名","name",item.name,"text") + input("単位","unit",item.unit,"text") + input("税抜単価","priceEx",item.priceEx,"number") + input("数量","qty",item.qty,"number") + '<label>料金区分<select aria-label="明細' + (index+1) + ' 料金区分" onchange="updateCustomProduct(' + index + ',\'billing\',this.value)"><option value="one-time"' + (item.billing !== "monthly" ? ' selected' : '') + '>初期費用</option><option value="monthly"' + (item.billing === "monthly" ? ' selected' : '') + '>月額保守料</option></select></label><button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button></div>';
+      }).join("");
+      return;
+    }
     if (!customProducts.length) {
       list.innerHTML = '<div class="note">追加商品はまだありません。</div>';
       return;
@@ -1919,6 +1967,12 @@
         '<button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button>' +
         "</div>";
     }).join("");
+  }
+
+  function updateCustomProduct(index, key, value) {
+    if (!customProducts[index]) return;
+    customProducts[index][key] = key === "priceEx" || key === "qty" ? Math.max(0, Number(value) || 0) : value;
+    updateTotal();
   }
 
   function addCustomProduct() {
@@ -1973,7 +2027,7 @@
       var tax = calcTax(unitEx * p.qty);
       items.push({
         name: p.name,
-        billing: "one-time",
+        billing: p.billing || "one-time",
         unit: p.unit,
         qty: p.qty,
         unitEx: unitEx,
@@ -2030,6 +2084,7 @@
     var items = collectItems();
     var discount = parseMoney(document.getElementById("discount").value);
     var problems = [];
+    if (customProducts.some(function(item){return !String(item.name).trim() || !(Number(item.qty)>0) || !Number.isSafeInteger(Number(item.priceEx)) || Number(item.priceEx)<0;})) problems.push("見積明細の項目名・単価・数量");
 
     if (!name) problems.push("ご担当者名");
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("メールアドレス");
@@ -2350,12 +2405,17 @@
   }
 
   function resetDemo() {
+    sourceRevision = null;
+    sourceCaseId = 0;
+    document.getElementById("quoteEditPanel").hidden = true;
+    document.getElementById("restoredProductList").innerHTML = "";
+    document.querySelector("#screen1 h2").textContent = "サービス注文フォーム";
+    document.querySelector("#screen1 button[onclick='submitOrder()']").textContent = "この内容で見積書を作成する";
     document.getElementById("company").value = "";
     document.getElementById("name").value = "";
     document.getElementById("address").value = "";
     document.getElementById("email").value = "";
     document.getElementById("phone").value = "";
-    sourceCaseId = 0;
     document.getElementById("discount").value = "0";
     customProducts = [];
     PRODUCTS.forEach(function(_, i) { document.getElementById("qty" + i).value = 0; });
