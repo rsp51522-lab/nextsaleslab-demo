@@ -5,11 +5,19 @@
 <title>請求書作成 | NSL相談所</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;font-size:16px}header{background:#17324d;color:white;padding:22px 24px}header div{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font-size:24px;margin:0}a{color:inherit}main{max-width:1400px;margin:24px auto;padding:0 20px;display:grid;grid-template-columns:minmax(320px,460px) minmax(0,1fr);gap:24px;align-items:start}.editor{background:white;padding:24px;border:1px solid #d9e2ec;border-radius:12px}.editor h2{font-size:20px;margin:0 0 16px}.editor h3{font-size:17px;margin:24px 0 12px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wide{grid-column:1/-1}label{display:grid;gap:6px;font-size:14px;font-weight:bold}input,textarea,select{font:inherit;border:1px solid #b9c8d9;border-radius:6px;padding:10px;width:100%;min-width:0;background:white;color:#172033}textarea{resize:vertical;line-height:1.6}button{font:inherit;cursor:pointer;border:0;border-radius:6px;background:#0f766e;color:white;padding:11px 16px;font-weight:bold}button.secondary{background:#e7eef5;color:#17324d}button.remove{background:white;color:#b91c1c;border:1px solid #fecaca;font-size:13px;padding:7px 10px}.item-editor{padding:14px 0;border-bottom:1px solid #d9e2ec}.item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.item-head strong{font-size:14px}.item-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.item-fields label:first-child{grid-column:1/-1}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.note{font-size:13px;color:#64748b;line-height:1.6}.preview{min-width:0}.preview-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 12px}.preview-bar h2{font-size:18px;margin:0}.preview-scroll{overflow:auto;padding:0 0 16px}.invoice-paper{position:relative;background:#fff;width:210mm;min-height:296mm;color:#000;font-family:Arial,"Hiragino Kaku Gothic ProN","Hiragino Sans",Meiryo,sans-serif;font-size:9.5pt;line-height:1.2;box-shadow:0 2px 14px #17324d20;padding:0}.invoice-meta{position:absolute;right:12.35mm;top:10mm;text-align:right;font-size:10.5pt;line-height:1.3}.invoice-meta div+div{margin-top:3.4mm}.invoice-title{position:absolute;top:28mm;left:0;width:100%;text-align:center;font-size:24pt;font-weight:bold;margin:0}.invoice-recipient{position:absolute;top:44mm;left:12.35mm;width:94mm;font-size:14pt;font-weight:bold;line-height:1.45}.invoice-recipient span{border-bottom:0.6pt solid #000;overflow-wrap:anywhere}.invoice-issuer{position:absolute;top:44mm;left:112.9mm;width:84mm;font-size:10.5pt;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.15}.invoice-issuer .issuer-address{margin-top:5.3mm;font-size:9.5pt}.invoice-issuer .issuer-phone{margin-top:5mm;font-size:9.5pt}.invoice-subject{position:absolute;left:12.35mm;top:55.7mm;width:94mm;font-size:9.5pt;line-height:1.4;overflow-wrap:anywhere}.invoice-greeting{position:absolute;left:12.35mm;top:63.5mm;margin:0}.invoice-total-top{position:absolute;left:12.35mm;top:71.6mm;width:81.2mm;border-bottom:0.6pt solid #000;display:flex;justify-content:space-between;gap:4mm;font-size:12pt;padding:0 0 1mm;line-height:1.2}.invoice-due{position:absolute;left:12.35mm;top:82.5mm;font-size:9.5pt}.invoice-table-area{padding:92.71mm 12.35mm 0;width:100%}.invoice-items{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9.5pt}.invoice-items th,.invoice-items td{border:0.6pt solid #000;height:8.82mm;padding:1.5mm 2.5mm;line-height:1.25;overflow-wrap:anywhere}.invoice-items th{background:#d9d9d9;text-align:center;font-weight:bold;border-top-width:1pt}.invoice-items th:first-child,.invoice-items td:first-child{border-left-width:1pt}.invoice-items th:last-child,.invoice-items td:last-child{border-right-width:1pt}.invoice-items tbody tr:last-child td{border-bottom-width:1pt}.invoice-items td:not(:first-child){text-align:right}.invoice-items col:nth-child(1){width:60%}.invoice-items col:nth-child(2){width:12.76%}.invoice-items col:nth-child(3){width:12.38%}.invoice-items col:nth-child(4){width:14.86%}.invoice-sums{border-collapse:collapse;width:40%;margin-left:auto;font-size:9.5pt}.invoice-sums th,.invoice-sums td{border:0.6pt solid #000;height:8.82mm;padding:1.5mm 2.5mm;font-weight:normal}.invoice-sums th{text-align:left;width:62.85%;border-left-width:1pt}.invoice-sums td{text-align:right;border-right-width:1pt}.invoice-sums tr:last-child th,.invoice-sums tr:last-child td{border-bottom-width:1pt}.invoice-bank{margin:4.9mm 0 0;white-space:pre-wrap;line-height:1.4;font-size:10.5pt;overflow-wrap:anywhere;padding-bottom:12mm}.invoice-bank strong{font-weight:bold}#status{font-size:14px;color:#0f766e;min-height:20px;margin-top:12px}button:disabled{opacity:.6;cursor:wait}input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}@page{size:A4;margin:0}@media(max-width:1100px){main{grid-template-columns:1fr}.editor{max-width:none}}@media(max-width:520px){main{padding:0 10px;margin:12px auto}.editor{padding:16px}header{padding:16px}h1{font-size:21px}.fields{grid-template-columns:1fr}.actions button{flex:1}.preview-bar button{font-size:14px}.preview-scroll{border:1px solid #d9e2ec}.note{margin:8px 0}}@media print{html,body{margin:0!important;padding:0!important;background:#fff!important}body>header,.editor,.preview-bar,.preview>.note,#status{display:none!important}main{display:block!important;margin:0!important;padding:0!important;max-width:none!important}.preview-scroll{overflow:visible!important;margin:0!important;padding:0!important;border:0!important}.invoice-paper{box-shadow:none!important;margin:0!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.invoice-items tr,.invoice-sums tr,.invoice-bank{break-inside:avoid}}
+
+[hidden]{display:none!important}.import-panel{max-width:900px;margin:24px auto;background:white;border:1px solid #bfdbfe;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px #083d591a}.import-panel h2{font-size:24px;color:#fff;margin:0}.import-heading{padding:24px;background:linear-gradient(135deg,#083d59,#0b5f8c);color:white}.import-heading p{margin:8px 0 0;line-height:1.6}.import-body{padding:24px}.pdf-drop{display:block;border:2px dashed #3b82f6;border-radius:12px;background:#eff6ff;padding:28px 18px;text-align:center;cursor:pointer}.pdf-drop strong{display:block;color:#1d4ed8;font-size:20px;margin-bottom:8px}.pdf-drop span{font-weight:normal;line-height:1.6}.pdf-drop input{margin-top:16px;background:white;font-size:16px}.import-status{margin-top:16px;padding:14px;border-radius:8px;background:#f1f5f9;line-height:1.7}.import-status.done{background:#dcfce7;color:#166534}.import-status.warning,.import-status.busy{background:#fef3c7;color:#92400e}.import-status.error{background:#fee2e2;color:#b91c1c}.import-options{margin-top:16px;padding:16px;border:1px solid #bfdbfe;border-radius:8px}.import-options p{line-height:1.7}.import-apply{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.import-apply label{flex:1;min-width:200px}@media(max-width:640px){.import-panel{margin:12px 10px}.import-heading,.import-body{padding:18px}.import-heading h2{font-size:22px}}@media print{.import-panel{display:none!important}}
 </style>
 </head>
 <body>
 <header><div><h1>請求書作成</h1><a href="./?mode=toolbox">業務メニューへ戻る</a></div></header>
-<main>
+<section class="import-panel" aria-label="見積PDFから請求書作成">
+<div class="import-heading"><h2>見積PDFから請求書を自動作成</h2><p>見積書を取り込み、宛名・明細・金額を請求書へ反映します。</p></div>
+<div class="import-body"><label class="pdf-drop"><strong>見積書PDFを選択</strong><span>顧客名・見積番号・明細・金額を読み取ります</span><input type="file" id="estimate-pdf" accept="application/pdf,.pdf" aria-label="見積書PDFを選択"></label>
+<div id="import-status" class="import-status" role="status" aria-live="polite">PDFを選択してください。画像PDFはOCRで読み取るため、少し時間がかかります。</div>
+<div id="import-options" class="import-options" hidden><p id="import-summary"></p><div class="import-apply"><label>請求対象<select id="import-billing"><option value="initial">初期費用のみ</option><option value="monthly">月額保守料（1ヶ月分）のみ</option><option value="both">初期費用＋月額保守料1ヶ月分</option></select></label><button type="button" id="apply-import">読取内容を反映</button></div><p class="note">請求対象を変えたら「読取内容を反映」を押してください。編集した明細は見積の読取内容に置き換わります。</p></div>
+<div class="actions"><button type="button" id="manual-invoice" class="secondary">PDFを使わず手入力で作成</button></div></div></section>
+<main id="invoice-workspace" hidden>
 <section class="editor" aria-label="請求書の入力">
 <h2>請求内容を入力</h2><p class="note">宛名・明細を入力すると、右の請求書に反映されます。金額は税抜で入力してください。</p>
 <form id="invoice-form">
@@ -28,7 +36,7 @@
 栃木県小山市城東7-6-11</textarea></label>
 <label class="wide">電話番号<input id="issuerPhone" value="0285-39-6600" type="tel" maxlength="40"></label>
 <label class="wide">お振込先<textarea id="bank" rows="2" maxlength="300">三井住友銀行　人形町支店(普)1230219　カシマ チカ</textarea></label>
-<label>消費税率（%）<input id="taxRate" type="number" value="10" min="0" max="100" step="0.1" required></label>
+<label>消費税率（%）<input id="taxRate" type="number" value="10" min="0" max="100" step="0.1" required></label><label>消費税の端数処理<select id="taxRounding"><option value="floor">切り捨て</option><option value="round">四捨五入</option></select></label>
 </div>
 <div class="actions"><button type="button" id="save-draft" class="secondary">下書きを保存</button><button type="button" id="load-draft" class="secondary">下書きを読込</button></div>
 <div class="actions"><button type="button" id="sample" class="secondary">クララの見本を入力</button><button type="button" id="clear" class="secondary">新しい請求書</button></div>
@@ -54,10 +62,12 @@
 <p class="note">横に動かすと用紙全体を確認できます。明細が多い場合は複数ページになります。</p>
 </section></main>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const fieldIds=['recipient','honorific','number','issueDate','dueDate','subject','issuer','issuerAddress','issuerPhone','bank','taxRate'];
+const fieldIds=['recipient','honorific','number','issueDate','dueDate','subject','issuer','issuerAddress','issuerPhone','bank','taxRate','taxRounding'];
 const DRAFT_KEY='nsl-invoice-draft-v1';
 let items=[{name:'',quantity:1,price:0}];
 const localDate=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -67,7 +77,7 @@ const text=(id,value)=>{$(id).textContent=value;};
 const status=message=>text('status',message);
 function numberFor(date){return date.replaceAll('-','')+'-'+String(Date.now()).slice(-6);}
 function newInvoice(){const now=new Date();$('recipient').value='';$('honorific').value='御中';$('subject').value='';$('issueDate').value=localDate(now);$('dueDate').value=localDate(new Date(now.getFullYear(),now.getMonth()+1,0));$('number').value=numberFor($('issueDate').value);items=[{name:'',quantity:1,price:0}];renderEditors();render();}
-function calculate(){const lines=items.map(item=>Math.round(Number(item.quantity||0)*Number(item.price||0)));const subtotal=lines.reduce((a,b)=>a+b,0);const tax=Math.floor(subtotal*Number($('taxRate').value||0)/100);return {lines,subtotal,tax,total:subtotal+tax};}
+function calculate(){const lines=items.map(item=>Math.round(Number(item.quantity||0)*Number(item.price||0)));const subtotal=lines.reduce((a,b)=>a+b,0);const tax=Math[$('taxRounding').value==='round'?'round':'floor'](subtotal*Number($('taxRate').value||0)/100);return {lines,subtotal,tax,total:subtotal+tax};}
 function renderEditors(){const container=$('items-editor');container.replaceChildren();items.forEach((item,index)=>{const div=document.createElement('div');div.className='item-editor';const head=document.createElement('div');head.className='item-head';const title=document.createElement('strong');title.textContent=`明細 ${index+1}`;const remove=document.createElement('button');remove.type='button';remove.className='remove';remove.textContent='削除';remove.setAttribute('aria-label',`明細${index+1}を削除`);remove.onclick=()=>{items.splice(index,1);renderEditors();render();};head.append(title,remove);const fields=document.createElement('div');fields.className='item-fields';[['name','品番・品名','text'],['quantity','数量','number'],['price','単価（税抜・割引はマイナス）','number']].forEach(([key,labelText,type])=>{const label=document.createElement('label');label.append(document.createTextNode(labelText));const input=document.createElement('input');input.type=type;input.value=item[key];if(type==='number'){input.step=key==='quantity'?'0.01':'1';if(key==='quantity')input.min='0';}else input.maxLength=500;input.addEventListener('input',()=>{items[index][key]=type==='number'?Number(input.value):input.value;render();});label.append(input);fields.append(label);});div.append(head,fields);container.append(div);});}
 function render(){const sums=calculate();text('p-date',jpDate($('issueDate').value));text('p-number',$('number').value);text('p-recipient',[$('recipient').value,$('honorific').value].filter(Boolean).join(' '));text('p-issuer',$('issuer').value);text('p-address',$('issuerAddress').value);text('p-phone',$('issuerPhone').value);text('p-subject',$('subject').value);text('p-due',jpDate($('dueDate').value));text('p-bank',$('bank').value);text('p-rate',$('taxRate').value);text('p-subtotal',fmt(sums.subtotal));text('p-tax',fmt(sums.tax));text('p-total',fmt(sums.total));text('p-total-top','¥ '+fmt(sums.total)+' -');const tbody=$('p-items');tbody.replaceChildren();for(let index=0;index<Math.max(10,items.length);index++){const tr=document.createElement('tr');const item=items[index];const values=item?[item.name,fmt(item.quantity),fmt(item.price),fmt(sums.lines[index])]:['','','',''];values.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});tbody.append(tr);}}
 function valid(){if(!$('invoice-form').reportValidity())return false;if(!items.length||!items.some(item=>item.name.trim()&&Number(item.quantity)>0)){status('品番・品名と数量を1件以上入力してください。');return false;}if(items.some(item=>!item.name.trim()||!Number.isFinite(Number(item.quantity))||Number(item.quantity)<=0||!Number.isFinite(Number(item.price)))){status('すべての明細に品番・品名と0より大きい数量、単価を入力してください。');return false;}render();return true;}
@@ -81,5 +91,129 @@ $('sample').onclick=()=>{if(!confirm('入力内容をクララの見本に置き
 $('clear').onclick=()=>{if(confirm('入力内容を消して新しい請求書を作成しますか？')){newInvoice();status('新しい請求書を作成しました。');}};
 $('print').onclick=()=>{if(valid())window.print();};
 $('download').onclick=async()=>{if(!valid())return;const button=$('download');button.disabled=true;status('PDFを作成しています。');try{if(!window.html2pdf){status('PDF保存機能を読み込めません。印刷ボタンから「PDFに保存」を選択してください。');return;}const filename=($('recipient').value+'_請求書_'+$('number').value).replace(/[\\/:*?"<>|]/g,'_')+'.pdf';await html2pdf().set({filename,margin:0,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,onclone:doc=>{const paper=doc.getElementById('invoice-paper');if(paper)paper.style.boxShadow='none';}},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.invoice-bank']}}).from($('invoice-paper')).save();status('PDFを保存しました。');}catch{status('PDFを保存できませんでした。印刷ボタンから「PDFに保存」を選択してください。');}finally{button.disabled=false;}};
+// Estimate import stays in the browser; uploaded PDFs are not sent to a server.
+let importedQuote=null;
+function importStatus(message,kind=''){const el=$('import-status');el.textContent=message;el.className='import-status '+kind;}
+function parseEstimateForInvoice(source,filename=''){
+  const lines=String(source||'').normalize('NFKC').replace(/￥/g,'¥').split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  const text=lines.join('\n');
+  const money=value=>Number(String(value).replace(/[^0-9.-]/g,''));
+  const amount=pattern=>{const line=lines.find(line=>pattern.test(line));if(!line)return null;const match=line.match(pattern);return match?money(match[1]):null;};
+  const customer=text.match(/^(.+?)\s*(御中|様)(?:\s|$)/m);
+  const fallback=filename.replace(/\.pdf$/i,'').replace(/_?(?:御?見積書).*$/,'').replace(/(?:御中|様)$/,'').trim();
+  const order=text.match(/(?:注文番号|見積番号)\s*[:：]?\s*([A-Z0-9][A-Z0-9_-]+)/i)||text.match(/\b(NSL-\d{6,}(?:-\d+)?)/i);
+  const initialItems=[],monthlyItems=[],warnings=[];
+  let monthly=false;
+  for(const line of lines){
+    if(/^(?:月額保守料|月額項目)(?:$|\s|\()/.test(line)&&!/\/月/.test(line))monthly=true;
+    if(/^制作・サービス項目|^初期費用の明細/.test(line))monthly=false;
+    if(/^(?:商品名|保守プラン|小計|消費税|割引|初期費用合計|月額小計|月額消費税|月額保守料\s*\(税込\)|月額保守料は|合計金額|ドル|※)/.test(line))continue;
+    const row=line.match(/^(.+?)\s+(?:(ID|枚|件|時間|式|セット|月|名|人)\s+)?(\d+(?:\.\d+)?)\s+¥?\s*([\d,]+)\s*(\/月)?\s+¥?\s*([\d,]+)\s*(\/月)?(?:\s|$)/i);
+    if(!row)continue;
+    const item={name:row[1].trim(),quantity:Number(row[3]),price:money(row[4]),amount:money(row[6]),unit:row[2]||''};
+    if(!(item.quantity>0)||!Number.isSafeInteger(item.price)||!Number.isSafeInteger(item.amount))continue;
+    (monthly||row[5]||row[7]?monthlyItems:initialItems).push(item);
+  }
+  const discount=amount(/^割引(?:\s*\(税抜\))?\s*[-−]?\s*¥?\s*([\d,]+)/)||0;
+  const subtotal=amount(/^小計(?:\s*\(税抜\))?\s*¥?\s*([\d,]+)/);
+  const tax=amount(/^消費税(?:\s*\(10\s*%\))?\s*¥?\s*([\d,]+)/);
+  const total=amount(/^(?:初期費用合計|合計金額|お見積金額)(?:\s*\(税込\))?\s*[:：]?\s*¥?\s*([\d,]+)/);
+  const monthlySubtotal=amount(/^月額小計(?:\s*\(税抜\))?\s*¥?\s*([\d,]+)/);
+  const monthlyTax=amount(/^月額消費税(?:\s*\(10\s*%\))?\s*¥?\s*([\d,]+)/);
+  const monthlyTotal=amount(/^月額保守料\s*\(税込\)\s*¥?\s*([\d,]+)/);
+  const initialNet=total!=null&&tax!=null?total-tax:subtotal!=null?subtotal:initialItems.reduce((sum,item)=>sum+item.amount,0)-discount;
+  const monthlyNet=monthlySubtotal!=null?monthlySubtotal:monthlyTotal!=null&&monthlyTax!=null?monthlyTotal-monthlyTax:monthlyItems.reduce((sum,item)=>sum+item.amount,0);
+  const reconcile=(rows,net,deduction,label)=>{
+    if(!net&&!rows.length)return;
+    const sum=rows.reduce((acc,item)=>acc+Math.round(item.quantity*item.price),0);
+    if(!rows.length||sum-deduction!==net||rows.some(item=>Math.round(item.quantity*item.price)!==item.amount)){
+      rows.splice(0,rows.length,{name:label+'（見積書記載・明細を確認してください）',quantity:1,price:net+deduction,amount:net+deduction});
+      warnings.push(label+'の明細をすべて読み取れなかったため、見積書の合計金額でまとめています。元のPDFと照合して明細を修正してください。');
+    }
+  };
+  reconcile(initialItems,initialNet,discount,'制作・サービス一式');
+  reconcile(monthlyItems,monthlyNet,0,'月額保守料');
+  if(!customer)warnings.push('宛名をファイル名から仮入力しました。正式な宛名を確認してください。');
+  if(!initialItems.length&&!monthlyItems.length)throw Error('見積書の明細・金額を読み取れませんでした。');
+  if(initialNet<0||monthlyNet<0)throw Error('読み取った金額を確認できませんでした。');
+  const initialTax=tax!=null?tax:Math.round(initialNet*.1);
+  const recurringTax=monthlyTax!=null?monthlyTax:Math.round(monthlyNet*.1);
+  return {recipient:customer?customer[1].trim():fallback,honorific:customer?customer[2]:'御中',orderNo:order?order[1]:'',initialItems,monthlyItems,discount,initialNet,initialTax,initialTotal:total!=null?total:initialNet+initialTax,monthlyNet,monthlyTax:recurringTax,monthlyTotal:monthlyTotal!=null?monthlyTotal:monthlyNet+recurringTax,warnings};
+}
+function invoiceLinesFromEstimate(quote,billing){
+  const initial=billing!=='monthly',monthly=billing!=='initial';
+  const rows=[];
+  const add=(source,prefix)=>source.forEach(item=>rows.push({name:prefix+item.name+(item.unit&&item.unit!=='件'?'（単位：'+item.unit+'）':''),quantity:item.quantity,price:item.price}));
+  if(initial){add(quote.initialItems,'');if(quote.discount)rows.push({name:'見積書の割引（税抜）',quantity:1,price:-quote.discount});}
+  if(monthly)add(quote.monthlyItems,'[月額保守料・1ヶ月分] ');
+  return rows;
+}
+function showInvoiceWorkspace(){const workspace=$('invoice-workspace');workspace.hidden=false;workspace.scrollIntoView({behavior:'smooth',block:'start'});}
+function applyImportedEstimate(){
+  if(!importedQuote)return;
+  const billing=$('import-billing').value;
+  const next=invoiceLinesFromEstimate(importedQuote,billing);
+  if(!next.length){importStatus('この見積書には選択した請求対象の明細がありません。','error');return;}
+  items=next;
+  $('recipient').value=importedQuote.recipient;$('honorific').value=importedQuote.honorific;
+  $('subject').value=(importedQuote.orderNo?'見積番号 '+importedQuote.orderNo+' / ':'')+({initial:'制作・サービス費',monthly:'月額保守料（1ヶ月分）',both:'制作・サービス費・月額保守料1ヶ月分'})[billing];
+  $('taxRate').value='10';$('taxRounding').value='round';
+  const expected=(billing!=='monthly'?importedQuote.initialTotal:0)+(billing!=='initial'?importedQuote.monthlyTotal:0);
+  const expectedTax=(billing!=='monthly'?importedQuote.initialTax:0)+(billing!=='initial'?importedQuote.monthlyTax:0);
+  const net=next.reduce((sum,item)=>sum+Math.round(item.quantity*item.price),0);
+  if(Math.floor(net*.1)===expectedTax)$('taxRounding').value='floor';
+  renderEditors();render();showInvoiceWorkspace();
+  const calculated=calculate();
+  const warnings=[...importedQuote.warnings];
+  if(calculated.total!==expected)warnings.push('見積の請求対象合計は'+fmt(expected)+'円、現在の請求合計は'+fmt(calculated.total)+'円です。税額・明細を確認して修正してください。');
+  importStatus('見積書を反映しました。宛名・明細・発行日・お支払い期限を確認し、PDFを保存してください。'+(warnings.length?' '+warnings.join(' '):''),warnings.length?'warning':'done');
+}
+function estimatePdfLines(entries){
+  const rows=[];
+  entries.forEach(item=>{const y=Math.round(item.transform?.[5]||0),x=item.transform?.[4]||0;let row=rows.find(row=>Math.abs(row.y-y)<=2);if(!row){row={y,cells:[]};rows.push(row);}row.cells.push({x,text:item.str||''});});
+  return rows.sort((a,b)=>b.y-a.y).map(row=>row.cells.sort((a,b)=>a.x-b.x).map(cell=>cell.text).join(' ').trim()).filter(Boolean);
+}
+async function readEstimatePdf(file){
+  if(!window.pdfjsLib)throw Error('PDF読込機能を読み込めません。通信状態を確認して再読み込みしてください。');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  try{
+    let lines=[];
+    for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){const page=await pdf.getPage(pageNo);lines.push(...estimatePdfLines((await page.getTextContent()).items));}
+    if(lines.join('').replace(/\s/g,'').length>=40)return lines.join('\n');
+    if(!window.Tesseract)throw Error('画像PDFのOCR機能を読み込めません。再読み込みしてください。');
+    importStatus('画像PDFです。OCRで読み取っています…','busy');
+    const worker=await Tesseract.createWorker('jpn');
+    try{
+      const results=[];
+      for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+        importStatus('画像PDFを読取中… '+pageNo+' / '+pdf.numPages+'ページ','busy');
+        const page=await pdf.getPage(pageNo),viewport=page.getViewport({scale:2}),canvas=document.createElement('canvas');
+        canvas.width=viewport.width;canvas.height=viewport.height;await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+        results.push((await worker.recognize(canvas)).data.text||'');canvas.width=canvas.height=0;
+      }
+      return results.join('\n');
+    }finally{await worker.terminate();}
+  }finally{await pdf.destroy();}
+}
+$('estimate-pdf').addEventListener('change',async event=>{
+  const input=event.target,file=input.files[0];if(!file)return;
+  if(!/\.pdf$/i.test(file.name)||(file.type&&file.type!=='application/pdf')){importStatus('PDFファイルを選択してください。','error');input.value='';return;}
+  input.disabled=true;importStatus('見積書PDFを読み取っています…','busy');
+  try{
+    const quote=parseEstimateForInvoice(await readEstimatePdf(file),file.name);
+    newInvoice();
+    importedQuote=quote;
+    const billing=$('import-billing');billing.querySelector('[value="initial"]').disabled=!quote.initialItems.length;billing.querySelector('[value="monthly"]').disabled=!quote.monthlyItems.length;billing.querySelector('[value="both"]').disabled=!quote.initialItems.length||!quote.monthlyItems.length;
+    billing.value=quote.initialItems.length?'initial':'monthly';
+    $('import-options').hidden=false;
+    text('import-summary',(quote.recipient||'宛名を確認')+(quote.orderNo?' / 見積番号 '+quote.orderNo:'')+' / 初期費用 '+fmt(quote.initialTotal)+'円（税込） / 月額保守料 '+fmt(quote.monthlyTotal)+'円（税込）');
+    applyImportedEstimate();
+  }catch(error){importStatus(error.message||'読み取れませんでした。別のPDFを選ぶか、手入力で作成してください。','error');}
+  finally{input.disabled=false;input.value='';}
+});
+$('apply-import').onclick=applyImportedEstimate;
+$('manual-invoice').onclick=showInvoiceWorkspace;
+
 newInvoice();
 </script></body></html>
