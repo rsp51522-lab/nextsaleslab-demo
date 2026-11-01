@@ -73,7 +73,17 @@ function confirmedData(book){const s=book.sheets['実績']?.map;if(!s)throw Erro
  const repCancel={};for(let r=61;r<=64;r++)if(cancelSheet[`B${r}`])repCancel[repName(cancelSheet[`B${r}`])]={fresh:value(cancelSheet,`G${r}`),sales:value(cancelSheet,`H${r}`)};
  if(Object.values(repCancel).reduce((a,x)=>a+x.sales,0)!==sales.cancel)throw Error('キャンセル担当別の合計が一致しません。');
  const repSales={};for(let r=180;r<=183;r++)if(pk[`C${r}`])repSales[repName(pk[`C${r}`])]=value(pk,`J${r}`);
- return {sales,m,counts,overall:g('D9'),repCancel,repSales};
+ const repCounts={};
+ for(let r=59;r<=62;r++){
+  const name=repName(s[`B${r}`]);if(!name)continue;
+  const refs=[`G${r}`,`H${r}`,`K${r}`];
+  if(refs.some(ref=>s[ref]===undefined||s[ref]===null||String(s[ref]).trim()===''||!Number.isFinite(Number(s[ref]))))throw Error('確定ファイルの担当者別真水に数値がありません。');
+  const [result,fresh,cancel]=refs.map(g);
+  if(fresh-cancel!==result)throw Error('確定ファイルの担当者別真水と実績が一致しません。');
+  repCounts[name]={result,fresh,cancel};
+ }
+ if(!Object.keys(repCounts).length||Object.values(repCounts).reduce((sum,x)=>sum+x.fresh,0)!==counts.gain||Object.values(repCounts).reduce((sum,x)=>sum+x.result,0)!==counts.result||Object.values(repCounts).reduce((sum,x)=>sum+x.cancel,0)!==counts.cancel)throw Error('確定ファイルの担当者別真水と合計が一致しません。');
+ return {sales,m,counts,overall:g('D9'),repCancel,repSales,repCounts};
 }
 function setCell(sheet,ref,n){
  const doc=sheet.doc,data=doc.getElementsByTagNameNS(ns,'sheetData')[0];if(!data)throw Error('Excelのシート構造を読み取れません。');
@@ -175,6 +185,18 @@ function renderProgress(annual,d,n){
  const now=data.find(x=>x.month===n),diff=(now?.actual||0)-monthlyTarget;
  $('#this-month-summary').innerHTML=[['目標達成率',`${Math.round((now?.actual||0)/monthlyTarget*100)}%`],['目標との差額',`${diff>=0?'+':''}${yen(diff)}`],['営業真水実績',`${now?.fresh??0}件`],['メンテPT',`${Number((now?.pt??0).toFixed(1))} PT`]].map(([label,val])=>`<div><span>${n}月 ${label}</span><strong>${val}</strong></div>`).join('');
 }
+function updateAnnualRepCounts(book,d,n){
+ const sales=book.sheets['営業'];if(!sales)throw Error('年間ファイルに「営業」がありません。');
+ const sc=monthCol(n,68);
+ ['浅野','小林','西沢','遠藤'].forEach((name,i)=>{
+  const x=d.repCounts[name];if(!x)throw Error(`確定ファイルに${name}の真水実績がありません。`);
+  setCell(sales,`${sc}${13+i}`,x.fresh);setCell(sales,`${sc}${21+i}`,x.cancel);
+ });
+ book.zip.file(sales.path,serialize(sales.doc));
+ let calc=book.book.getElementsByTagNameNS(ns,'calcPr')[0];if(!calc){calc=book.book.createElementNS(ns,'calcPr');book.book.documentElement.appendChild(calc);}
+ calc.setAttribute('fullCalcOnLoad','1');calc.setAttribute('forceFullCalc','1');calc.setAttribute('calcMode','auto');
+ book.zip.file('xl/workbook.xml',serialize(book.book));
+}
 async function updateAnnual(book,d,s,n){
  const annual=book.sheets['部署売上'],sales=book.sheets['営業'];if(!annual||!sales||!book.sheets['メンテ'])throw Error('2026年ファイルに「部署売上」「営業」「メンテ」が揃っていません。');
  const c=monthCol(n,69),sc=monthCol(n,68),put=(r,v)=>setCell(annual,`${c}${r}`,v);
@@ -182,7 +204,7 @@ async function updateAnnual(book,d,s,n){
  [d.m.tochigi,d.m.koga].forEach((list,i)=>list.forEach((v,j)=>put((i?59:53)+j,v)));
  for(const [r,v] of [[75,d.counts.result],[76,d.counts.gain],[77,d.counts.cancel],[78,d.counts.shared+d.counts.existing+d.counts.tenant],[79,d.counts.shared],[80,d.counts.existing],[81,d.counts.tenant],[82,d.counts.op],...[85,86,87,88].map((r,i)=>[r,d.counts.tochigi[i]]),...[90,91,92,93].map((r,i)=>[r,d.counts.koga[i]])])put(r,v);
  for(const [r,v] of [[14,d.overall],[15,d.sales.total],[16,d.m.total],[20,d.overall],[37,d.sales.total],[47,d.m.total]])setFormulaCache(annual,`${c}${r}`,v);
- const reps=['浅野','小林','西沢','遠藤'];reps.forEach((name,i)=>{const x=s.reps[name]||{fresh:0,cancel:0};setCell(sales,`${sc}${13+i}`,x.fresh);setCell(sales,`${sc}${21+i}`,d.repCancel[name]?.fresh||0);});
+ updateAnnualRepCounts(book,d,n);
  // Formula cells and unrelated months stay intact. Excel refreshes dependent cached values on open.
  let calc=book.book.getElementsByTagNameNS(ns,'calcPr')[0];if(!calc){calc=book.book.createElementNS(ns,'calcPr');book.book.documentElement.appendChild(calc);}calc.setAttribute('fullCalcOnLoad','1');calc.setAttribute('forceFullCalc','1');calc.setAttribute('calcMode','auto');
  book.zip.file('xl/workbook.xml',serialize(book.book));
@@ -194,7 +216,11 @@ async function syncAnnual(){
  const y=Number(year.value),book=await loadBook(files.annual);let output,count=0;
  for(const m of fiscalMonths){
   const c=monthCol(m,69),monthly=book.sheets['部署売上']?.map;
-  if(monthly&&(value(monthly,`${c}14`)>0||value(monthly,`${c}15`)>0||value(monthly,`${c}16`)>0))continue;
+  if(monthly&&(value(monthly,`${c}14`)>0||value(monthly,`${c}15`)>0||value(monthly,`${c}16`)>0)){
+   const cf=await readItem(storageKey('confirmed',m,y));if(!cf)continue;
+   updateAnnualRepCounts(book,confirmedData(await loadBook(cf)),m);
+   output=await book.zip.generateAsync({type:'blob',compression:'DEFLATE'});count++;continue;
+  }
   const [sf,cf]=await Promise.all([readItem(storageKey('sales',m,y)),readItem(storageKey('confirmed',m,y))]);
   if(!sf||!cf)continue;
   const sales=salesData(parseXls(await sf.arrayBuffer())),confirmed=confirmedData(await loadBook(cf));
@@ -232,8 +258,8 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  const existing=annual.sheets['部署売上'].map;if(existing[`${monthCol(n,69)}40`]||existing[`${monthCol(n,69)}53`])warnings.push('年間ファイルのこの月には既存値があります。ダウンロード時は保管した月の対象項目を置き換えます。');
  $('#warning').hidden=!warnings.length;$('#warning').textContent=warnings.join('　');
  $('#total').textContent=yen(current.actual);$('#sales-total').textContent=yen(current.sales);$('#maintenance-total').textContent=yen(current.maintenance);
- const freshGain=d.counts.shared+d.counts.existing;
- $('#sales-kpi').textContent=yen(current.sales);$('#shared-kpi').textContent=`${freshGain-d.counts.cancel}件`;$('#existing-kpi').textContent=`${freshGain}件`;
+ const freshGain=d.counts.gain;
+ $('#sales-kpi').textContent=yen(current.sales);$('#shared-kpi').textContent=`${d.counts.result}件`;$('#existing-kpi').textContent=`${freshGain}件`;
  $('#maintenance-kpi').textContent=yen(current.maintenance);$('#tochigi-kpi').textContent=yen(annualEntered?value(annual.sheets['部署売上'].map,`${monthCol(n,69)}49`):d.m.tochigi.reduce((a,b)=>a+b,0));$('#koga-kpi').textContent=yen(annualEntered?value(annual.sheets['部署売上'].map,`${monthCol(n,69)}50`):d.m.koga.reduce((a,b)=>a+b,0));
  renderProgress(annual,d,n);
  $('#sales-rows').innerHTML=[['シェアド',d.counts.shared,d.sales.shared],['既存',d.counts.existing,d.sales.existing],['店子',d.counts.tenant,d.sales.tenant],['OP',d.counts.op,d.sales.op],['固定費',0,d.sales.fixed],['キャンセル控除',d.counts.cancel,-d.sales.cancel]].map(([name,count,amount])=>`<tr${name==='キャンセル控除'?' class="cancel-row"':''}><th>${name}</th><td>${count}</td><td>${yen(amount)}</td></tr>`).join('');
@@ -246,7 +272,7 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
    const shownCounts=annualEntered?counts.map((_,i)=>value(annualMap,`${c}${cr+i}`)):counts;
   $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${shownCounts[i]}</td><td>${yen(shownAmounts[i])}</td></tr>`).join('');
   }
- $('#reps').innerHTML=Object.entries(sales.reps).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.fresh-(d.repCancel[name]?.fresh||0)}</td><td>${x.fresh}</td><td>${d.repCancel[name]?.fresh||0}</td><td>${x.op||0}</td></tr>`).join('');
+ $('#reps').innerHTML=Object.entries(d.repCounts).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.result}</td><td>${x.fresh}</td><td>${x.cancel}</td><td>${sales.reps[name]?.op||0}</td></tr>`).join('');
  detailAvailable=true;$('#result').hidden=false;status.textContent=`${year.value}年度 ${n}月は保存済みです。年間ファイルの営業 ${yen(current.sales)}・メンテ ${yen(current.maintenance)} を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
 $('#save').onclick=async()=>{const status=$('#status');try{
