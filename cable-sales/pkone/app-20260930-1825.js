@@ -69,21 +69,25 @@ function confirmedData(book){const s=book.sheets['実績']?.map;if(!s)throw Erro
  const counts={result:g('G26'),gain:g('G28'),cancel:g('G35'),shared:g('G30'),existing:g('G31'),tenant:g('G32'),op:g('G33'),tochigi:[g('H48'),g('H49'),g('H50'),g('H51')],koga:[g('I48'),g('I49'),g('I50'),g('I51')]};
  if(!Number.isFinite(sales.total)||!Number.isFinite(m.total)||Math.abs(sales.shared+sales.existing+sales.tenant+sales.op+sales.fixed-sales.cancel-sales.total)>1||Math.abs([...m.tochigi,...m.koga].reduce((a,b)=>a+b,0)-m.total)>1)throw Error('確定ファイルの営業・メンテ内訳が合計と一致しません。');
  const cancelSheet=book.sheets['栃木キャン']?.map,pk=book.sheets['栃木PK']?.map;
- if(!cancelSheet||!pk||value(cancelSheet,'H66')!==sales.cancel)throw Error('確定ファイルの栃木キャンと実績の金額が一致しません。');
- const repCancel={};for(let r=61;r<=64;r++)if(cancelSheet[`B${r}`])repCancel[repName(cancelSheet[`B${r}`])]={fresh:value(cancelSheet,`G${r}`),sales:value(cancelSheet,`H${r}`)};
+ if(!cancelSheet||!pk)throw Error('確定ファイルに栃木キャンまたは栃木PKがありません。');
+ const repCancel={};for(let r=61;r<=65;r++)if(['浅野','小林','西沢','遠藤'].includes(repName(cancelSheet[`B${r}`])))repCancel[repName(cancelSheet[`B${r}`])]={fresh:value(cancelSheet,`G${r}`),sales:value(cancelSheet,`H${r}`)};
  if(Object.values(repCancel).reduce((a,x)=>a+x.sales,0)!==sales.cancel)throw Error('キャンセル担当別の合計が一致しません。');
  const repSales={};for(let r=180;r<=183;r++)if(pk[`C${r}`])repSales[repName(pk[`C${r}`])]=value(pk,`J${r}`);
- const repCounts={};
+ const repCounts={};let repCountsError='';
+ const cancelColumn=['I','K'].find(col=>String(s[`${col}57`]||'').replace(/\s+/g,'').startsWith('キャン'));
+ try{
+ if(!cancelColumn)throw Error('確定ファイルの担当者別キャンセル列が見つかりません。');
  for(let r=59;r<=62;r++){
   const name=repName(s[`B${r}`]);if(!name)continue;
-  const refs=[`G${r}`,`H${r}`,`K${r}`];
+  const refs=[`G${r}`,`H${r}`,`${cancelColumn}${r}`];
   if(refs.some(ref=>s[ref]===undefined||s[ref]===null||String(s[ref]).trim()===''||!Number.isFinite(Number(s[ref]))))throw Error('確定ファイルの担当者別真水に数値がありません。');
   const [result,fresh,cancel]=refs.map(g);
   if(fresh-cancel!==result)throw Error('確定ファイルの担当者別真水と実績が一致しません。');
   repCounts[name]={result,fresh,cancel};
  }
  if(!Object.keys(repCounts).length||Object.values(repCounts).reduce((sum,x)=>sum+x.fresh,0)!==counts.gain||Object.values(repCounts).reduce((sum,x)=>sum+x.result,0)!==counts.result||Object.values(repCounts).reduce((sum,x)=>sum+x.cancel,0)!==counts.cancel)throw Error('確定ファイルの担当者別真水と合計が一致しません。');
- return {sales,m,counts,overall:g('D9'),repCancel,repSales,repCounts};
+ }catch(error){repCountsError=error.message;}
+ return {sales,m,counts,overall:g('D9'),repCancel,repSales,repCounts,repCountsError};
 }
 function setCell(sheet,ref,n){
  const doc=sheet.doc,data=doc.getElementsByTagNameNS(ns,'sheetData')[0];if(!data)throw Error('Excelのシート構造を読み取れません。');
@@ -186,6 +190,7 @@ function renderProgress(annual,d,n){
  $('#this-month-summary').innerHTML=[['目標達成率',`${Math.round((now?.actual||0)/monthlyTarget*100)}%`],['目標との差額',`${diff>=0?'+':''}${yen(diff)}`],['営業真水実績',`${now?.fresh??0}件`],['メンテPT',`${Number((now?.pt??0).toFixed(1))} PT`]].map(([label,val])=>`<div><span>${n}月 ${label}</span><strong>${val}</strong></div>`).join('');
 }
 function updateAnnualRepCounts(book,d,n){
+ if(d.repCountsError)return;
  const sales=book.sheets['営業'];if(!sales)throw Error('年間ファイルに「営業」がありません。');
  const sc=monthCol(n,68);
  ['浅野','小林','西沢','遠藤'].forEach((name,i)=>{
@@ -250,7 +255,7 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
  const current=chartData(annual,d,n).find(x=>x.month===n);
  const annualEntered=value(annual.sheets['部署売上'].map,`${monthCol(n,69)}14`)>0;
  if(!annualEntered){await writeItem(storageKey('summary'),summary);storedSummaries[n]=summary;}
- const warnings=[];if(sales.sourceMonth!==n)warnings.push(`営業実績表は${sales.sourceMonth}月の契約日です。反映先は${n}月です。`);
+ const warnings=[];if(d.repCountsError)warnings.push(`${d.repCountsError} 担当者別真水は要確認です。年間ファイルの担当者別数値は更新していません。全体の実績は表示しています。`);if(sales.sourceMonth!==n)warnings.push(`営業実績表は${sales.sourceMonth}月の契約日です。反映先は${n}月です。`);
  if(annualEntered&&(current.sales!==d.sales.total||current.maintenance!==d.m.total))warnings.push(`年間ファイルを優先しています。確定ファイルの内訳は営業 ${yen(d.sales.total)}・メンテ ${yen(d.m.total)}、年間ファイルは営業 ${yen(current.sales)}・メンテ ${yen(current.maintenance)} です。`);
  const unallocated=d.sales.shared+d.sales.existing+d.sales.tenant+d.sales.op-Object.values(d.repSales).reduce((a,b)=>a+b,0);
  if(unallocated)warnings.push(`担当者別元売上と営業区分売上の差額 ${yen(unallocated)} は担当者に配賦していません。固定費も担当者別には含めません。`);
@@ -272,7 +277,7 @@ async function render(){if(!loaded)return;const id=++revision,status=$('#status'
    const shownCounts=annualEntered?counts.map((_,i)=>value(annualMap,`${c}${cr+i}`)):counts;
   $(`#${place}-rows`).innerHTML=['訪問','時間','延長','OP'].map((label,i)=>`<tr><th>${label}</th><td>${shownCounts[i]}</td><td>${yen(shownAmounts[i])}</td></tr>`).join('');
   }
- $('#reps').innerHTML=Object.entries(d.repCounts).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.result}</td><td>${x.fresh}</td><td>${x.cancel}</td><td>${sales.reps[name]?.op||0}</td></tr>`).join('');
+ $('#reps').innerHTML=d.repCountsError?`<tr><td colspan="6">${esc(d.repCountsError)} 担当者別真水は要確認です。</td></tr>`:Object.entries(d.repCounts).map(([name,x])=>`<tr><th>${esc(name)}</th><td>${d.repSales[name]===undefined?'要確認':yen(d.repSales[name]-(d.repCancel[name]?.sales||0))}</td><td>${x.result}</td><td>${x.fresh}</td><td>${x.cancel}</td><td>${sales.reps[name]?.op||0}</td></tr>`).join('');
  detailAvailable=true;$('#result').hidden=false;status.textContent=`${year.value}年度 ${n}月は保存済みです。年間ファイルの営業 ${yen(current.sales)}・メンテ ${yen(current.maintenance)} を表示中です。`;status.className='notice ok';showView();$('#save').disabled=false;
  }catch(e){console.error(e);status.textContent=e.message||'ファイルを読み込めませんでした。';status.className='notice error';showView();}}
 $('#save').onclick=async()=>{const status=$('#status');try{
