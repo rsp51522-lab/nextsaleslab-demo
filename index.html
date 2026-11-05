@@ -1396,6 +1396,7 @@
           '<div class="import-status" id="importStatus">PDFを選択してください。画像PDFの場合はOCRで読み取るため少し時間がかかります。</div>' +
           '<div class="import-result hidden" id="importResult">' +
             '<div class="import-summary" id="importSummary"></div>' +
+            '<label style="display:block;margin:16px 0;font-weight:700;">月額保守・クラウド管理費（税抜・円／月）<input id="contractMonthlyFee" type="number" min="0" step="1" style="display:block;margin-top:8px;padding:10px;width:240px;max-width:100%;" oninput="updateContractMonthlyFee(this)"></label>' +
             '<p class="edit-hint">✏️ 読み取り結果は契約書内を直接クリックして修正できます</p>' +
             '<div id="contractDocument" class="contract" contenteditable="true" spellcheck="false"></div>' +
             '<div class="storage-panel"><h3>契約書PDFの保管</h3>' +
@@ -1535,6 +1536,7 @@
       state.fileName = file.name;
       state.contractFileName = (state.company || state.name).replace(/【|】/g, "") + "_契約書_" + state.orderNo + ".pdf";
       document.getElementById("contractDocument").innerHTML = buildContractBodyHtml();
+      document.getElementById("contractMonthlyFee").value = getContractAmounts().monthly;
       document.getElementById("importSummary").textContent = "読取結果：" + (state.company || state.name) + " / " + state.orderNo + " / " + yen(state.total) + "（税込）";
       document.getElementById("importResult").classList.remove("hidden");
       setImportStatus("契約書を自動作成しました。内容を確認してPDFを保管してください。", "done");
@@ -1708,6 +1710,15 @@
     }
   }
 
+  function updateContractMonthlyFee(input) {
+    if (!input.checkValidity() || input.value === "") return;
+    var amount = Number(input.value);
+    if (!Number.isSafeInteger(amount) || amount < 0) return;
+    state.contractMonthlyFee = amount;
+    var cell = document.getElementById("contractMonthlyAmount");
+    if (cell) cell.textContent = yen(amount);
+  }
+
   function getContractAmounts() {
     var setup = 0;
     var monthly = 0;
@@ -1722,7 +1733,7 @@
     development -= applied;
     remainingDiscount -= applied;
     setup = Math.max(0, setup - remainingDiscount);
-    return { development: development, setup: setup, monthly: monthly };
+    return { development: development, setup: setup, monthly: typeof state.contractMonthlyFee === "number" ? state.contractMonthlyFee : monthly };
   }
 
   function buildContractBodyHtml() {
@@ -1776,7 +1787,7 @@
       '<table class="amount-table"><tr><th>項目</th><th>金額（税別）</th><th>支払条件</th></tr>' +
       '<tr><td>初期開発費</td><td>' + yen(amounts.development) + '</td><td>契約締結日から30日以内</td></tr>' +
       '<tr><td>初期設定費</td><td>' + yen(amounts.setup) + '</td><td>契約締結日から30日以内</td></tr>' +
-      '<tr><td>月額保守・クラウド管理費</td><td>' + yen(amounts.monthly) + '</td><td>無償利用期間満了日の翌日から発生</td></tr>' +
+      '<tr><td>月額保守・クラウド管理費</td><td id="contractMonthlyAmount">' + yen(amounts.monthly) + '</td><td>無償利用期間満了日の翌日から発生</td></tr>' +
       '<tr><td>外部サービス利用料</td><td>必要な場合は別途</td><td>必要な場合は別途</td></tr>' +
       '<tr><td>追加開発費</td><td>別途見積り</td><td>甲の承諾後に実施</td></tr></table>' +
       '<p class="contract-note">※ 月額保守・クラウド管理費に含まれる範囲及び対象外の作業は、第7条の定めによる。</p></div>';
