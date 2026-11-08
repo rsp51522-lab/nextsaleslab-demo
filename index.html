@@ -181,6 +181,7 @@
     border: 1px solid #d1d5db;
     font-size: 14px;
   }
+  .product-price { width: 110px; max-width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; text-align: right; }
   .custom-product-box {
     margin-top: 14px;
     padding: 14px;
@@ -796,7 +797,7 @@
         <label>制作・サービス項目（数量を選択）<span class="req">1点以上</span></label>
         <table class="products">
           <thead>
-            <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業日数</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
+            <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業期間</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
           </thead>
           <tbody id="productRows"></tbody>
         </table>
@@ -1086,8 +1087,8 @@
   var pendingMailTimer = 0;
   var mailSendPopup = null;
   var PRODUCTS = [
-    { code: "NSL001", name: "領収書管理bot", unit: "ID", workHours: 1, priceEx: 0 },
-    { code: "NSL002", name: "名刺管理システム", unit: "ID", workHours: 1, priceEx: 0 },
+    { code: "NSL001", name: "領収書管理Bot", unit: "ID", workHours: 1, priceEx: 8000 },
+    { code: "NSL002", name: "名刺管理システム", unit: "ID", workHours: 1, priceEx: 9900 },
     { code: "NSL003", name: "名刺・領収書読込", unit: "枚", workHours: 1, priceEx: 20 },
     { code: "NSL004", name: "議事録自動化", unit: "ID", workHours: 1, priceEx: 10000 },
     { code: "NSL005", name: "Googleフォーム制作", unit: "件", workHours: 1, priceEx: 10000 },
@@ -1097,12 +1098,12 @@
     { code: "NSL009", name: "見積自動作成（マクロ）", unit: "件", workHours: 2, priceEx: 30000 },
     { code: "NSL010", name: "見積自動作成システム（一般）", unit: "件", workHours: 2, priceEx: 50000 },
     { code: "NSL011", name: "見積自動作成システム（オーダー）", unit: "件", workHours: 4, priceEx: 75000 },
-    { code: "NSL012", name: "図面読込自動システム", unit: "件", workHours: 7, priceEx: 50000 },
+    { code: "NSL012", name: "AIアプリ（図面読込）", unit: "件", workHours: "1ヶ月", priceEx: 264000, startingPrice: true },
     { code: "NSL013", name: "作業工程表（基本）", unit: "件", workHours: 2, priceEx: 30000 },
     { code: "NSL014", name: "作業工程表（画像取込）", unit: "件", workHours: 7, priceEx: 50000 },
     { code: "NSL015", name: "特殊作業工程表（AI）", unit: "件", workHours: 7, priceEx: 100000 },
-    { code: "NSL016", name: "AI機能", unit: "件", workHours: 3, priceEx: 50000 },
-    { code: "NSL017", name: "AI機能（オーダー）", unit: "件", workHours: 7, priceEx: 75000 },
+    { code: "NSL016", name: "AI機能", unit: "件", workHours: "7日", priceEx: 56000, startingPrice: true },
+    { code: "NSL017", name: "AIDX（オーダー・打合せ）", unit: "件", workHours: "1ヶ月", priceEx: 176000, startingPrice: true },
     { code: "NSL018", name: "AI機能(特殊）", unit: "件", workHours: 7, priceEx: 100000 },
     { code: "NSL019", name: "建築関連システム制作", unit: "件", workHours: 2, priceEx: 50000 },
     { code: "NSL020", name: "AIチャットPod", unit: "件", workHours: 7, priceEx: 50000 },
@@ -1113,9 +1114,6 @@
     { code: "NSL025", name: "訪問初期設定（1時間）", unit: "時間", workHours: 1, priceEx: 5000 },
     { code: "NSL026", name: "システム初期設定・動作確認", unit: "件", workHours: 1, priceEx: 20000 },
     { code: "NSL027", name: "共有データーベース", unit: "件", workHours: 1, priceEx: 60000 },
-    { code: "NSL028", name: "データ管理小規模", unit: "ID", workHours: 1, priceEx: 5000 },
-    { code: "NSL029", name: "データ管理中規模", unit: "ID", workHours: 1, priceEx: 10000 },
-    { code: "NSL030", name: "データ管理大規模", unit: "ID", workHours: 1, priceEx: 25000 },
     { code: "NSL031", name: "Google MAP API取得・設定", unit: "件", workHours: "", priceEx: 30000 },
     { code: "NSL032", name: "工程表制作・自動反映", unit: "件", workHours: "", priceEx: 30000 },
     { code: "NSL033", name: "社員・資格・自動判別", unit: "件", workHours: "", priceEx: 20000 },
@@ -1989,6 +1987,11 @@
     renderMaintenanceRows();
   }
 
+  function updateProductPrice(index, input) {
+    PRODUCTS[index].priceEx = input.value === "" ? NaN : Number(input.value);
+    updateTotal();
+  }
+
   function initProducts() {
     var tbody = document.getElementById("productRows");
     var initialRows = [];
@@ -2007,7 +2010,7 @@
         "<td>" + p.name + "</td>" +
         '<td class="unit-col">' + formatUnit(p.unit) + "</td>" +
         '<td class="num">' + p.workHours + "</td>" +
-        '<td class="num">' + yen(p.priceEx) + "</td>" +
+        '<td class="num"><input class="product-price" type="number" min="0" step="1" required inputmode="numeric" aria-label="' + escapeHtml(p.name) + 'の税抜単価" value="' + p.priceEx + '" oninput="updateProductPrice(' + i + ',this)">' + (p.startingPrice ? '<small class="usd-reference">参考価格 ' + yen(originalProducts[i].priceEx) + '〜</small>' : '') + "</td>" +
         '<td class="num">' + qtyField + "</td>" +
         "</tr>");
     });
@@ -2126,7 +2129,7 @@
       return '<div class="custom-row">' +
         "<strong>" + escapeHtml(item.name) + "</strong>" +
         "<span>" + formatUnit(item.unit) + "</span>" +
-        '<span class="num">' + yen(item.priceEx) + "</span>" +
+        '<input class="product-price" type="number" min="0" step="1" required aria-label="' + escapeHtml(item.name) + 'の税抜単価" value="' + item.priceEx + '" oninput="updateCustomProduct(' + index + ',\'priceEx\',this.value)">' +
         '<span>数量 ' + item.qty + "</span>" +
         '<button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button>' +
         "</div>";
@@ -2252,6 +2255,7 @@
     var items = collectItems();
     var discount = parseMoney(document.getElementById("discount").value);
     var problems = [];
+    if (Array.from(document.querySelectorAll(".product-price")).some(function(input){return !input.checkValidity();})) problems.push("税抜単価（0以上の整数）");
     if (items.some(function(item){return !String(item.name || "").trim() || !Number.isSafeInteger(item.unitEx) || item.unitEx < 0;})) problems.push("項目名・税抜単価");
     var rateInput = Number(document.getElementById("maintenanceExchangeRate").value);
     if (!Number.isFinite(rateInput) || rateInput <= 0) problems.push("月額保守料の換算レート");
