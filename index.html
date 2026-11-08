@@ -181,7 +181,42 @@
     border: 1px solid #d1d5db;
     font-size: 14px;
   }
-  .product-price { width: 110px; max-width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; text-align: right; }
+  .product-price-button {
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .product-price-button:hover, .product-price-button:focus-visible {
+    color: var(--main);
+    text-decoration: underline;
+  }
+  .price-dialog {
+    position: fixed;
+    inset: 0;
+    width: min(380px, calc(100% - 32px));
+    margin: auto;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: inherit;
+    background: var(--card);
+  }
+  .price-dialog::backdrop { background: rgba(15, 23, 42, .45); }
+  .price-dialog h3 { margin-bottom: 12px; color: var(--main-dark); }
+  .price-dialog input[type=number] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font: inherit;
+  }
+  .price-dialog .btn-row { grid-template-columns: 1fr 1fr; }
+  .price-dialog .btn { margin-top: 0; }
   .custom-product-box {
     margin-top: 14px;
     padding: 14px;
@@ -795,6 +830,7 @@
       </div>
       <div class="field">
         <label>制作・サービス項目（数量を選択）<span class="req">1点以上</span></label>
+        <p class="note">単価を修正するには、金額を選んでください。</p>
         <table class="products">
           <thead>
             <tr><th>項目</th><th class="unit-col">単位</th><th class="num">作業期間</th><th class="num">税抜単価</th><th class="num">数量</th></tr>
@@ -957,7 +993,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn sub" type="button" onclick="showScreen(1)">戻る</button>
+        <button class="btn sub" type="button" onclick="showScreen(1)">見積内容を修正する</button>
         <button class="btn sub" type="button" onclick="openPerformanceApp()">実績管理へ登録画面を開く</button>
         <button class="btn sub" type="button" onclick="saveDocumentPdf('estimate')">見積PDFを保管</button>
         <button class="btn sub" type="button" onclick="prepareDocumentMail('estimate')">見積書をメール送信</button>
@@ -1065,6 +1101,21 @@
     </div>
   </section>
 </div>
+
+<dialog id="productPriceDialog" class="price-dialog" aria-labelledby="productPriceTitle">
+  <form method="dialog" onsubmit="saveProductPrice()">
+    <h3 id="productPriceTitle">税抜単価を変更</h3>
+    <p class="field" id="productPriceName"></p>
+    <div class="field">
+      <label for="productPriceInput">税抜単価（円）</label>
+      <input id="productPriceInput" type="number" min="0" max="9007199254740991" step="1" required inputmode="numeric" autofocus>
+    </div>
+    <div class="btn-row">
+      <button class="btn sub" type="button" onclick="document.getElementById('productPriceDialog').close()">キャンセル</button>
+      <button class="btn" type="submit">反映する</button>
+    </div>
+  </form>
+</dialog>
 
 <form id="mailSendForm" class="hidden" method="post" target="mailSendPopup">
   <input type="hidden" name="payload" id="mailPayloadInput">
@@ -1987,8 +2038,37 @@
     renderMaintenanceRows();
   }
 
-  function updateProductPrice(index, input) {
-    PRODUCTS[index].priceEx = input.value === "" ? NaN : Number(input.value);
+  function productPriceText(item, index, custom) {
+    var startingPrice = !custom && item.startingPrice && item.priceEx === originalProducts[index].priceEx;
+    return yen(item.priceEx) + (startingPrice ? "〜" : "");
+  }
+
+  function productPriceButton(item, index, custom) {
+    return '<button type="button" class="product-price-button" data-index="' + index +
+      '" data-custom="' + custom + '" title="税抜単価を変更" aria-label="' +
+      escapeHtml(item.name) + 'の税抜単価を変更" onclick="openProductPrice(this)">' +
+      productPriceText(item, index, custom) + '</button>';
+  }
+
+  var activePriceButton;
+
+  function openProductPrice(button) {
+    activePriceButton = button;
+    var items = button.dataset.custom === "true" ? customProducts : PRODUCTS;
+    var item = items[Number(button.dataset.index)];
+    document.getElementById("productPriceName").textContent = item.name;
+    var input = document.getElementById("productPriceInput");
+    input.value = item.priceEx;
+    document.getElementById("productPriceDialog").showModal();
+    input.select();
+  }
+
+  function saveProductPrice() {
+    var custom = activePriceButton.dataset.custom === "true";
+    var index = Number(activePriceButton.dataset.index);
+    var item = (custom ? customProducts : PRODUCTS)[index];
+    item.priceEx = document.getElementById("productPriceInput").valueAsNumber;
+    activePriceButton.textContent = productPriceText(item, index, custom);
     updateTotal();
   }
 
@@ -2010,7 +2090,7 @@
         "<td>" + p.name + "</td>" +
         '<td class="unit-col">' + formatUnit(p.unit) + "</td>" +
         '<td class="num">' + p.workHours + "</td>" +
-        '<td class="num"><input class="product-price" type="number" min="0" step="1" required inputmode="numeric" aria-label="' + escapeHtml(p.name) + 'の税抜単価" value="' + p.priceEx + '" oninput="updateProductPrice(' + i + ',this)">' + (p.startingPrice ? '<small class="usd-reference">参考価格 ' + yen(originalProducts[i].priceEx) + '〜</small>' : '') + "</td>" +
+        '<td class="num">' + productPriceButton(p, i, false) + "</td>" +
         '<td class="num">' + qtyField + "</td>" +
         "</tr>");
     });
@@ -2129,7 +2209,7 @@
       return '<div class="custom-row">' +
         "<strong>" + escapeHtml(item.name) + "</strong>" +
         "<span>" + formatUnit(item.unit) + "</span>" +
-        '<input class="product-price" type="number" min="0" step="1" required aria-label="' + escapeHtml(item.name) + 'の税抜単価" value="' + item.priceEx + '" oninput="updateCustomProduct(' + index + ',\'priceEx\',this.value)">' +
+        productPriceButton(item, index, true) +
         '<span>数量 ' + item.qty + "</span>" +
         '<button type="button" class="remove-btn" onclick="removeCustomProduct(' + index + ')">削除</button>' +
         "</div>";
@@ -2255,7 +2335,6 @@
     var items = collectItems();
     var discount = parseMoney(document.getElementById("discount").value);
     var problems = [];
-    if (Array.from(document.querySelectorAll(".product-price")).some(function(input){return !input.checkValidity();})) problems.push("税抜単価（0以上の整数）");
     if (items.some(function(item){return !String(item.name || "").trim() || !Number.isSafeInteger(item.unitEx) || item.unitEx < 0;})) problems.push("項目名・税抜単価");
     var rateInput = Number(document.getElementById("maintenanceExchangeRate").value);
     if (!Number.isFinite(rateInput) || rateInput <= 0) problems.push("月額保守料の換算レート");
