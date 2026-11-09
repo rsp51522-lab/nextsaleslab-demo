@@ -947,7 +947,7 @@
           <div>
             <div class="est-addressee" id="estAddressee"></div>
             <div style="margin-top:10px;">下記の通りお見積り申し上げます。</div>
-            <div class="est-total">初期費用　<span id="estTotalTop"></span>（税込）</div>
+            <div class="est-total">制作費用　<span id="estTotalTop"></span>（税込）</div>
           </div>
           <div class="est-company">
             発行日：<span id="estDate"></span><br>
@@ -960,7 +960,7 @@
           </div>
         </div>
 
-        <h3>制作・サービス項目（初期費用）</h3>
+        <h3>制作・サービス項目（制作費用）</h3>
         <table class="est-items">
           <thead>
             <tr><th>商品名</th><th class="unit-col">単位</th><th class="num">数量</th><th class="num">単価（税抜）</th><th class="num">金額（税抜）</th></tr>
@@ -972,7 +972,7 @@
           <div><span>小計（税抜）</span><span id="estSubtotal"></span></div>
           <div><span>消費税（10%）</span><span id="estTax"></span></div>
           <div><span>割引（税抜）</span><span id="estDiscount"></span></div>
-          <div class="grand"><span>初期費用合計（税込）</span><span id="estTotal"></span></div>
+          <div class="grand"><span>合計（税込）</span><span id="estTotal"></span></div>
         </div>
 
         <div id="estMaintenanceSection" class="hidden">
@@ -986,7 +986,7 @@
             <div><span>月額消費税（10%）</span><span id="estMonthlyTax"></span></div>
             <div class="grand"><span>月額保守料（税込）</span><span id="estMonthlyTotal"></span></div>
           </div>
-          <p class="est-note" id="estMaintenanceNote">月額保守料は初期費用とは別に毎月発生します。</p>
+          <p class="est-note" id="estMaintenanceNote">月額保守料は制作費用とは別に毎月発生します。</p>
         </div>
 
         <div class="est-note"></div>
@@ -1522,12 +1522,12 @@
     var orderMatch = normalized.match(/(?:注文番号|見積番号)\s*[:：]?\s*(NSL[-－][A-Za-z0-9-]+)/i) || normalized.match(/NSL[-－]\d{6,}(?:-\d+)?/i);
     var subtotalMatch = normalized.match(/小計(?:（税抜）)?\s*¥?\s*([\d,]+)/);
     var taxMatch = normalized.match(/消費税(?:（10%）)?\s*¥?\s*([\d,]+)/);
-    var totalMatches = Array.from(normalized.matchAll(/(?:初期費用合計|合計金額|お見積金額)[^\d\n]*([\d,]+)/g));
+    var totalMatches = Array.from(normalized.matchAll(/(?:初期費用合計|合計\s*[（(]税込[）)]|合計金額|お見積金額)[^\d\n]*([\d,]+)/g));
     var monthlyMatch = normalized.match(/月額小計（税抜）\s*¥?\s*([\d,]+)/);
     var monthlySubtotal = monthlyMatch ? parseMoney(monthlyMatch[1]) : 0;
     var discountMatch = normalized.match(/割引（税抜）\s*[-－]?\s*¥?\s*([\d,]+)/);
     var discount = discountMatch ? parseMoney(discountMatch[1]) : 0;
-    var separateBilling = /制作・サービス項目（初期費用）/.test(normalized);
+    var separateBilling = /制作・サービス項目[（(](?:初期費用|制作費用)[）)]/.test(normalized);
     var subtotal = subtotalMatch ? parseMoney(subtotalMatch[1]) : 0;
     var tax = taxMatch ? parseMoney(taxMatch[1]) : 0;
     var total = totalMatches.length ? parseMoney(totalMatches[totalMatches.length - 1][1]) : subtotal + tax;
@@ -2437,7 +2437,7 @@
     document.getElementById("estMonthlySubtotal").textContent = yen(state.monthlySubtotal || 0) + "/月";
     document.getElementById("estMonthlyTax").textContent = yen(state.monthlyTax || 0) + "/月";
     document.getElementById("estMonthlyTotal").textContent = yen(state.monthlyTotal || 0) + "/月";
-    document.getElementById("estMaintenanceNote").textContent = "月額保守料は初期費用とは別に毎月発生します。ドル表示は税抜・1ドル＝" + (state.exchangeRate || maintenanceExchangeRate) + "円で換算。円の金額を見積金額とします。";
+    document.getElementById("estMaintenanceNote").textContent = "月額保守料は制作費用とは別に毎月発生します。ドル表示は税抜・1ドル＝" + (state.exchangeRate || maintenanceExchangeRate) + "円で換算。円の金額を見積金額とします。";
 
     renderMailScreen("estimate");
   }

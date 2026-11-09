@@ -107,7 +107,7 @@ function parseEstimateForInvoice(source,filename=''){
   for(const line of lines){
     if(/^(?:月額保守料|月額項目)(?:$|\s|\()/.test(line)&&!/\/月/.test(line))monthly=true;
     if(/^制作・サービス項目|^初期費用の明細/.test(line))monthly=false;
-    if(/^(?:商品名|保守プラン|小計|消費税|割引|初期費用合計|月額小計|月額消費税|月額保守料\s*\(税込\)|月額保守料は|合計金額|ドル|※)/.test(line))continue;
+    if(/^(?:商品名|保守プラン|小計|消費税|割引|初期費用合計|合計\s*\(税込\)|月額小計|月額消費税|月額保守料\s*\(税込\)|月額保守料は|合計金額|ドル|※)/.test(line))continue;
     const row=line.match(/^(.+?)\s+(?:(ID|枚|件|時間|式|セット|月|名|人)\s+)?(\d+(?:\.\d+)?)\s+¥?\s*([\d,]+)\s*(\/月)?\s+¥?\s*([\d,]+)\s*(\/月)?(?:\s|$)/i);
     if(!row)continue;
     const item={name:row[1].trim(),quantity:Number(row[3]),price:money(row[4]),amount:money(row[6]),unit:row[2]||''};
@@ -117,7 +117,7 @@ function parseEstimateForInvoice(source,filename=''){
   const discount=amount(/^割引(?:\s*\(税抜\))?\s*[-−]?\s*¥?\s*([\d,]+)/)||0;
   const subtotal=amount(/^小計(?:\s*\(税抜\))?\s*¥?\s*([\d,]+)/);
   const tax=amount(/^消費税(?:\s*\(10\s*%\))?\s*¥?\s*([\d,]+)/);
-  const total=amount(/^(?:初期費用合計|合計金額|お見積金額)(?:\s*\(税込\))?\s*[:：]?\s*¥?\s*([\d,]+)/);
+  const total=amount(/^(?:初期費用合計|合計\s*\(税込\)|合計金額|お見積金額)(?:\s*\(税込\))?\s*[:：]?\s*¥?\s*([\d,]+)/);
   const monthlySubtotal=amount(/^月額小計(?:\s*\(税抜\))?\s*¥?\s*([\d,]+)/);
   const monthlyTax=amount(/^月額消費税(?:\s*\(10\s*%\))?\s*¥?\s*([\d,]+)/);
   const monthlyTotal=amount(/^月額保守料\s*\(税込\)\s*¥?\s*([\d,]+)/);
