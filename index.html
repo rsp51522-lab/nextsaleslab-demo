@@ -801,8 +801,8 @@
       </div>
 
       <div class="field">
-        <label>所在地（契約書へ自動入力）</label>
-        <input type="text" id="address" placeholder="例）栃木県小山市〇〇1-2-3">
+        <label for="address">所在地（契約書へ自動入力）<span class="req">必須</span></label>
+        <input type="text" id="address" required placeholder="例）栃木県小山市〇〇1-2-3">
       </div>
 
       <div class="field">
@@ -2332,6 +2332,7 @@
     var err = document.getElementById("formError");
     err.style.display = "none";
 
+    var address = document.getElementById("address").value.trim();
     var name = document.getElementById("name").value.trim();
     var email = document.getElementById("email").value.trim();
     var items = collectItems();
@@ -2344,6 +2345,7 @@
     if (customProducts.some(function(item){return !String(item.name).trim() || !(Number(item.qty)>0) || !Number.isSafeInteger(Number(item.priceEx)) || Number(item.priceEx)<0;})) problems.push("見積明細の項目名・単価・数量");
 
     if (!name) problems.push("ご担当者名");
+    if (!address) problems.push("所在地");
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("メールアドレス");
     if (!items.length) problems.push("サービス数量（1点以上）");
     if (problems.length) {
@@ -2358,7 +2360,7 @@
       ctype: document.querySelector("input[name=ctype]:checked").value,
       company: document.getElementById("company").value.trim(),
       name: name,
-      address: document.getElementById("address").value.trim(),
+      address: address,
       email: email,
       payment: document.getElementById("payment").value,
       phone: document.getElementById("phone").value.trim(),
