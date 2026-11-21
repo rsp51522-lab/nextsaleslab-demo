@@ -33,15 +33,15 @@
 <h3>明細</h3><div id="items-editor"></div><div class="actions"><button type="button" id="add-item" class="secondary">＋ 明細を追加</button></div>
 <h3>発行元</h3><div class="fields">
 <label class="wide">発行元<input id="issuer" value="NSL相談所" required maxlength="80"></label>
-<label class="wide">住所<textarea id="issuerAddress" rows="2" maxlength="200">〒323-0807
-栃木県小山市城東7-6-11</textarea></label>
-<label class="wide">電話番号<input id="issuerPhone" value="0285-39-6600" type="tel" maxlength="40"></label>
-<label class="wide" id="bank-field">お振込先<textarea id="bank" rows="2" maxlength="300">三井住友銀行　人形町支店(普)1230219　カシマ チカ</textarea></label>
+<label class="wide">住所<textarea id="issuerAddress" rows="2" maxlength="200"></textarea></label>
+<label class="wide">電話番号<input id="issuerPhone" type="tel" maxlength="40"></label>
+<label class="wide" id="bank-field">お振込先<textarea id="bank" rows="2" maxlength="300"></textarea></label>
 <label>消費税率（%）<input id="taxRate" type="number" value="10" min="0" max="100" step="0.1" required></label><label>消費税の端数処理<select id="taxRounding"><option value="floor">切り捨て</option><option value="round">四捨五入</option></select></label>
 </div>
 <div class="actions"><button type="button" id="save-draft" class="secondary">下書きを保存</button><button type="button" id="load-draft" class="secondary">下書きを読込</button></div>
-<div class="actions"><button type="button" id="sample" class="secondary">クララの見本を入力</button><button type="button" id="clear" class="secondary">新しい請求書</button></div>
-<p class="note">下書きはこのブラウザーに保存します。PDF保存・印刷はメール送信を行いません。</p>
+<div class="actions"><button type="button" id="sample" class="secondary">見本を入力</button><button type="button" id="clear" class="secondary">新しい請求書</button></div>
+<div class="actions"><button type="button" id="save-issuer" class="secondary">発行元・振込先をこの端末に保存</button></div>
+<p class="note">発行元・振込先はこのブラウザーに保存します。請求書を発行する前に振込先を確認してください。</p>
 </form>
 </section>
 <section class="preview" aria-label="請求書プレビュー">
@@ -72,6 +72,35 @@
 const $=id=>document.getElementById(id);
 const fieldIds=['documentType','recipient','honorific','number','issueDate','dueDate','subject','issuer','issuerAddress','issuerPhone','bank','taxRate','taxRounding'];
 const DRAFT_KEY='nsl-invoice-draft-v1';
+const ISSUER_KEY='nsl-invoice-issuer-v1';
+const issuerFields=['issuer','issuerAddress','issuerPhone','bank'];
+
+function readIssuerSettings(){
+  for(const key of [ISSUER_KEY,DRAFT_KEY]){
+    try{
+      const saved=JSON.parse(localStorage.getItem(key)||'null');
+      const fields=key===DRAFT_KEY?saved?.fields:saved;
+      if(fields&&issuerFields.some(field=>typeof fields[field]==='string'&&fields[field].trim()))return fields;
+    }catch{}
+  }
+  return null;
+}
+function loadIssuerSettings(){
+  const fields=readIssuerSettings();
+  if(!fields)return;
+  for(const field of issuerFields){
+    if(typeof fields[field]==='string'&&(field!=='issuer'||fields[field].trim()))$(field).value=fields[field];
+  }
+}
+$('save-issuer').onclick=()=>{
+  try{
+    const settings=Object.fromEntries(issuerFields.map(field=>[field,$(field).value.trim()]));
+    localStorage.setItem(ISSUER_KEY,JSON.stringify(settings));
+    status('発行元・振込先をこのブラウザーに保存しました。');
+  }catch{
+    status('発行元・振込先を保存できませんでした。');
+  }
+};
 let items=[{name:'',quantity:1,price:0}];
 const localDate=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const jpDate=value=>{const parts=String(value||'').split('-');return parts.length===3?`${Number(parts[0])}年${Number(parts[1])}月${Number(parts[2])}日`:'';};
@@ -91,15 +120,44 @@ $('documentType').addEventListener('change',()=>{const receipt=$('documentType')
 $('add-item').onclick=()=>{items.push({name:'',quantity:1,price:0});renderEditors();render();};
 $('save-draft').onclick=()=>{try{localStorage.setItem(DRAFT_KEY,JSON.stringify(snapshot()));status('このブラウザーに下書きを保存しました。');}catch{status('このブラウザーでは下書きを保存できません。PDF保存をご利用ください。');}};
 $('load-draft').onclick=()=>{try{const raw=localStorage.getItem(DRAFT_KEY);if(!raw){status('保存した下書きがありません。');return;}const data=JSON.parse(raw);if(data.version!==1||!Array.isArray(data.items)||data.items.length>100)throw Error();if(!confirm('入力内容を保存済みの下書きに置き換えますか？'))return;fieldIds.forEach(id=>{if(typeof data.fields?.[id]==='string')$(id).value=data.fields[id];});items=data.items.map(item=>({name:String(item.name||''),quantity:Number(item.quantity)||0,price:Number(item.price)||0}));renderEditors();render();status('下書きを読み込みました。');}catch{status('下書きを読み込めませんでした。');}};
-$('sample').onclick=()=>{if(!confirm('入力内容をクララの見本に置き換えますか？'))return;$('recipient').value='エモーション・クララ';$('honorific').value='様';$('number').value='20261011-002';$('issueDate').value='2026-10-11';$('dueDate').value='2026-10-31';$('subject').value='アプリ導入サポート費・名刺読込作業代行';$('issuer').value='NSL相談所';$('issuerAddress').value='〒323-0807\n栃木県小山市城東7-6-11';$('issuerPhone').value='0285-39-6600';$('bank').value='三井住友銀行　人形町支店(普)1230219　カシマ チカ';$('taxRate').value='10';items=[['LINE領収書・名刺アプリ',1,15000],['業務AI効率化',1,50000],['名刺読込',1026,20],['名刺データ移行',1,5000],['割引',1,-15000]].map(([name,quantity,price])=>({name:'[2026/10/11 納品分] '+name,quantity,price}));renderEditors();render();status('クララの見本を入力しました。請求金額は83,072円です。');};
+$('sample').onclick=()=>{if(!confirm('入力内容を見本に置き換えますか？'))return;$('recipient').value='サンプル会社';$('honorific').value='様';$('number').value='20261011-002';$('issueDate').value='2026-10-11';$('dueDate').value='2026-10-31';$('subject').value='アプリ導入サポート費・名刺読込作業代行';$('issuer').value='NSL相談所';$('taxRate').value='10';items=[['LINE領収書・名刺アプリ',1,15000],['業務AI効率化',1,50000],['名刺読込',1026,20],['名刺データ移行',1,5000],['割引',1,-15000]].map(([name,quantity,price])=>({name:'[2026/10/11 納品分] '+name,quantity,price}));renderEditors();render();status('見本を入力しました。請求金額は83,072円です。');};
 $('clear').onclick=()=>{if(confirm('入力内容を消して新しい請求書を作成しますか？')){newInvoice();status('新しい請求書を作成しました。');}};
 $('print').onclick=()=>{if(valid())window.print();};
 $('download').onclick=async()=>{if(!valid())return;const button=$('download');button.disabled=true;status('PDFを作成しています。');try{if(!window.html2pdf){status('PDF保存機能を読み込めません。印刷ボタンから「PDFに保存」を選択してください。');return;}const documentName=$('documentType').value==='receipt'?'領収書':'請求書';const filename=($('recipient').value+'_'+documentName+'_'+$('number').value).replace(/[\\/:*?"<>|]/g,'_')+'.pdf';await html2pdf().set({filename,margin:0,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,onclone:doc=>{const paper=doc.getElementById('invoice-paper');if(paper)paper.style.boxShadow='none';}},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['tr','.invoice-bank']}}).from($('invoice-paper')).save();status('PDFを保存しました。');}catch{status('PDFを保存できませんでした。印刷ボタンから「PDFに保存」を選択してください。');}finally{button.disabled=false;}};
 // Estimate import stays in the browser; uploaded PDFs are not sent to a server.
 let importedQuote=null;
 function importStatus(message,kind=''){const el=$('import-status');el.textContent=message;el.className='import-status '+kind;}
+function normalizeEstimateText(value) {
+  return String(value ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+}
+const estimateUnit = /^(.*)\s+(ID|枚|件|時間|式|セット|月|名|人|個|台|本|冊|箱|袋|組|ファイル|ページ|日|回|m|cm|mm|kg|g|L|m2|m3)$/i;
+const estimatePrice = '¥?\\s*([\\d,]+)\\s*(/月)?';
+const estimateRow = new RegExp('^(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+' + estimatePrice + '\\s+' + estimatePrice + '(?:\\s+\\(.*\\))?$');
+function readEstimateRow(line, columns, money) {
+  if (columns) {
+    const quantity = /^\d+(?:\.\d+)?$/.test(columns.quantity) ? Number(columns.quantity) : 0;
+    const yenCell = new RegExp('^' + estimatePrice + '(?:\\s+\\(.*\\))?$');
+    const price = columns.price.match(yenCell);
+    const amount = columns.amount.match(yenCell);
+    if (columns.name && quantity > 0 && price && amount) {
+      return {
+        item: {name:columns.name, unit:columns.unit, quantity, price:money(price[1]), amount:money(amount[1])},
+        monthly:columns.monthly || !!price[2] || !!amount[2],
+      };
+    }
+    return null;
+  }
+  const row = line.match(estimateRow);
+  if (!row) return null;
+  const namedUnit = row[1].match(estimateUnit);
+  return {
+    item: {name:(namedUnit?.[1] || row[1]).trim(), unit:namedUnit?.[2] || '', quantity:Number(row[2]), price:money(row[3]), amount:money(row[5])},
+    monthly:!!row[4] || !!row[6],
+  };
+}
 function parseEstimateForInvoice(source,filename=''){
-  const lines=String(source||'').normalize('NFKC').replace(/￥/g,'¥').split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  const rows = Array.isArray(source) ? source : String(source || '').split(/\r?\n/).map(text => ({text}));
+  const lines = rows.map(row => normalizeEstimateText(row.text));
   const text=lines.join('\n');
   const money=value=>Number(String(value).replace(/[^0-9.-]/g,''));
   const amount=pattern=>{const line=lines.find(line=>pattern.test(line));if(!line)return null;const match=line.match(pattern);return match?money(match[1]):null;};
@@ -108,15 +166,15 @@ function parseEstimateForInvoice(source,filename=''){
   const order=text.match(/(?:注文番号|見積番号)\s*[:：]?\s*([A-Z0-9][A-Z0-9_-]+)/i)||text.match(/\b(NSL-\d{6,}(?:-\d+)?)/i);
   const initialItems=[],monthlyItems=[],warnings=[];
   let monthly=false;
-  for(const line of lines){
+  for(const [index,line] of lines.entries()){
     if(/^(?:月額保守料|月額項目)(?:$|\s|\()/.test(line)&&!/\/月/.test(line))monthly=true;
     if(/^制作・サービス項目|^初期費用の明細/.test(line))monthly=false;
     if(/^(?:商品名|保守プラン|小計|消費税|割引|初期費用合計|合計\s*\(税込\)|月額小計|月額消費税|月額保守料\s*\(税込\)|月額保守料は|合計金額|ドル|※)/.test(line))continue;
-    const row=line.match(/^(.+?)\s+(?:(ID|枚|件|時間|式|セット|月|名|人)\s+)?(\d+(?:\.\d+)?)\s+¥?\s*([\d,]+)\s*(\/月)?\s+¥?\s*([\d,]+)\s*(\/月)?(?:\s|$)/i);
-    if(!row)continue;
-    const item={name:row[1].trim(),quantity:Number(row[3]),price:money(row[4]),amount:money(row[6]),unit:row[2]||''};
-    if(!(item.quantity>0)||!Number.isSafeInteger(item.price)||!Number.isSafeInteger(item.amount))continue;
-    (monthly||row[5]||row[7]?monthlyItems:initialItems).push(item);
+    const row = readEstimateRow(line,rows[index].columns,money);
+    if (!row) continue;
+    const {item} = row;
+    if (!(item.quantity > 0) || !Number.isSafeInteger(item.price) || !Number.isSafeInteger(item.amount)) continue;
+    (monthly || row.monthly ? monthlyItems : initialItems).push(item);
   }
   const discount=amount(/^割引(?:\s*\(税抜\))?\s*[-−]?\s*¥?\s*([\d,]+)/)||0;
   const subtotal=amount(/^小計(?:\s*\(税抜\))?\s*¥?\s*([\d,]+)/);
@@ -147,7 +205,7 @@ function parseEstimateForInvoice(source,filename=''){
 function invoiceLinesFromEstimate(quote,billing){
   const initial=billing!=='monthly',monthly=billing!=='initial';
   const rows=[];
-  const add=(source,prefix)=>source.forEach(item=>rows.push({name:prefix+item.name+(item.unit&&item.unit!=='件'?'（単位：'+item.unit+'）':''),quantity:item.quantity,price:item.price}));
+  const add=(source,prefix)=>source.forEach(item=>rows.push({name:prefix+item.name+(item.unit&&item.unit!=='件'&&!/^\d+(?:\.\d+)?$/.test(item.unit)?'（単位：'+item.unit+'）':''),quantity:item.quantity,price:item.price}));
   if(initial){add(quote.initialItems,'');if(quote.discount)rows.push({name:'見積書の割引（税抜）',quantity:1,price:-quote.discount});}
   if(monthly)add(quote.monthlyItems,'[月額保守料・1ヶ月分] ');
   return rows;
@@ -172,10 +230,62 @@ function applyImportedEstimate(){
   if(calculated.total!==expected)warnings.push('見積の請求対象合計は'+fmt(expected)+'円、現在の請求合計は'+fmt(calculated.total)+'円です。税額・明細を確認して修正してください。');
   importStatus('見積書を反映しました。宛名・明細・発行日・お支払い期限を確認し、PDFを保存してください。'+(warnings.length?' '+warnings.join(' '):''),warnings.length?'warning':'done');
 }
-function estimatePdfLines(entries){
-  const rows=[];
-  entries.forEach(item=>{const y=Math.round(item.transform?.[5]||0),x=item.transform?.[4]||0;let row=rows.find(row=>Math.abs(row.y-y)<=2);if(!row){row={y,cells:[]};rows.push(row);}row.cells.push({x,text:item.str||''});});
-  return rows.sort((a,b)=>b.y-a.y).map(row=>row.cells.sort((a,b)=>a.x-b.x).map(cell=>cell.text).join(' ').trim()).filter(Boolean);
+function estimatePdfLines(entries) {
+  const rows = [];
+  for (const item of entries) {
+    if (!item.transform || typeof item.str !== 'string' || !item.str) continue;
+    const x = item.transform[4];
+    const y = item.transform[5];
+    let row = rows.find(row => Math.abs(row.y - y) <= 2);
+    if (!row) rows.push(row = {y, cells:[]});
+    row.cells.push({x, end:x + (item.width || 0), text:item.str});
+  }
+  function merge(cells) {
+    let text = '';
+    let end = -Infinity;
+    for (const cell of cells) {
+      if (cell.x - end > 1.5 && text && !/\s$/.test(text)) text += ' ';
+      text += cell.text.replace(/[\u0000-\u001f\u007f]/g, ' ');
+      end = Math.max(end,cell.end);
+    }
+    return normalizeEstimateText(text);
+  }
+  function findHeader(cells) {
+    const labels = cells.map(cell => ({...cell, label:normalizeEstimateText(cell.text).replace(/\s+/g, '')}));
+    const quantity = labels.find(cell => cell.label === '数量');
+    const price = labels.find(cell => /^(?:月額)?単価(?:\(税抜\))?$/.test(cell.label));
+    const name = labels.find(cell => /^(?:商品名|品名|品番[・･/]?品名|保守プラン)$/.test(cell.label));
+    const amount = labels.find(cell => price && cell.x > price.x && /^(?:月額)?金(?:額(?:\(税抜\))?)?$/.test(cell.label));
+    const unit = labels.find(cell => cell.label === '単位');
+    if (!name || !quantity || !price || !amount || !(name.x < quantity.x && quantity.x < price.x)) return null;
+    const midpoint = (left,right) => (left.end + right.x) / 2;
+    return {
+      monthly:name.label === '保守プラン' || price.label.startsWith('月額'),
+      starts:unit
+        ? [midpoint(name,unit),midpoint(unit,quantity),midpoint(quantity,price),midpoint(price,amount)]
+        : [midpoint(name,quantity),midpoint(quantity,price),midpoint(price,amount)],
+      hasUnit:!!unit,
+    };
+  }
+  let header = null;
+  return rows.sort((a,b) => b.y - a.y).map(row => {
+    const cells = row.cells.sort((a,b) => a.x - b.x);
+    const text = merge(cells);
+    const newHeader = findHeader(cells);
+    if (newHeader) header = newHeader;
+    if (/^(?:月額)?(?:小計|消費税|割引|保守料\s*\(税込\)|合計)/.test(text) && !/\/月/.test(text)) header = null;
+    if (!header || newHeader) return {text};
+
+    const groups = Array.from({length:header.starts.length + 1},() => []);
+    for (const cell of cells) {
+      const index = header.starts.findIndex(start => cell.x < start);
+      groups[index < 0 ? groups.length - 1 : index].push(cell);
+    }
+    const [name,...values] = groups.map(merge);
+    const unit = header.hasUnit ? values.shift() : '';
+    const [quantity,price,amount] = values;
+    return {text, columns:{name,unit,quantity,price,amount,monthly:header.monthly}};
+  }).filter(line => line.text);
 }
 async function readEstimatePdf(file){
   if(!window.pdfjsLib)throw Error('PDF読込機能を読み込めません。通信状態を確認して再読み込みしてください。');
@@ -184,7 +294,7 @@ async function readEstimatePdf(file){
   try{
     let lines=[];
     for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){const page=await pdf.getPage(pageNo);lines.push(...estimatePdfLines((await page.getTextContent()).items));}
-    if(lines.join('').replace(/\s/g,'').length>=40)return lines.join('\n');
+    if(lines.map(line => line.text).join('').replace(/\s/g,'').length>=40)return lines;
     if(!window.Tesseract)throw Error('画像PDFのOCR機能を読み込めません。再読み込みしてください。');
     importStatus('画像PDFです。OCRで読み取っています…','busy');
     const worker=await Tesseract.createWorker('jpn');
@@ -220,5 +330,6 @@ $('apply-import').onclick=applyImportedEstimate;
 $('manual-invoice').onclick=()=>{ $('documentType').value='invoice';$('dueDate').required=true;render();showInvoiceWorkspace(); };
 $('manual-receipt').onclick=()=>{ $('documentType').value='receipt';$('dueDate').required=false;render();showInvoiceWorkspace(); };
 
+loadIssuerSettings();
 newInvoice();
 </script></body></html>
