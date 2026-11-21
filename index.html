@@ -1339,10 +1339,15 @@
       alert("先に見積書を作成してください。");
       return;
     }
-    var opened = window.open(buildPerformanceAppUrl(), "_blank", "noopener");
+    var destination = buildPerformanceAppUrl();
+    var opened = window.open("about:blank", "_blank");
     if (!opened) {
       alert("実績管理画面を開けませんでした。ブラウザのポップアップ許可を確認してください。");
+      return;
     }
+    // Detach the new tab before loading the separate performance app.
+    opened.opener = null;
+    opened.location.replace(destination);
   }
 
   function formatUnit(unit) {
