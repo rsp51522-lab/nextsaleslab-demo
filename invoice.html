@@ -25,7 +25,7 @@
 <label class="wide">書類種別<select id="documentType"><option value="invoice">請求書</option><option value="receipt">領収書</option></select></label>
 <label class="wide">宛名<input id="recipient" required maxlength="100" autocomplete="organization" placeholder="会社名・お客様名"></label>
 <label>敬称<select id="honorific"><option>御中</option><option>様</option><option value="">なし</option></select></label>
-<label>請求番号<input id="number" required maxlength="60"></label>
+<label>書類番号<input id="number" required maxlength="60"></label>
 <label>発行日<input id="issueDate" type="date" required></label>
 <label id="due-field">お支払い期限<input id="dueDate" type="date" required></label>
 <label class="wide">件名<input id="subject" maxlength="100" placeholder="アプリ導入サポート費など"></label>
@@ -48,15 +48,15 @@
 <div class="preview-bar"><h2 id="preview-heading">請求書 A4プレビュー</h2><div class="actions" style="margin:0"><button id="download" type="button">PDFを保存</button><button id="print" type="button" class="secondary">印刷</button></div></div>
 <p id="status" role="status" aria-live="polite"></p>
 <div class="preview-scroll"><article class="invoice-paper" id="invoice-paper">
-<div class="invoice-meta"><div id="p-date"></div><div><span id="p-number-label">請求番号</span>: <span id="p-number"></span></div></div>
+<div class="invoice-meta"><div id="p-date"></div><div><span id="p-number-label">書類番号</span>: <span id="p-number"></span></div></div>
 <h2 class="invoice-title" id="p-title">請求書</h2>
 <div class="invoice-recipient"><span id="p-recipient"></span></div>
 <div class="invoice-issuer"><div id="p-issuer"></div><div id="p-address" class="issuer-address"></div><div class="issuer-phone">TEL: <span id="p-phone"></span></div></div>
-<img class="receipt-seal" id="p-seal" hidden alt="NSL相談所 印影" src="assets/nsl-seal.png">
-<div class="receipt-issuer-meta" id="p-registration" hidden>登録番号: T5810812888551</div>
+<img class="receipt-seal" id="p-seal" alt="NSL相談所 印影" src="assets/nsl-seal.png">
+<div class="receipt-issuer-meta" id="p-registration">登録番号: T5810812888551</div>
 <div class="invoice-subject">件名 : <span id="p-subject"></span></div>
-<p class="invoice-greeting" id="p-greeting">下記のとおりご請求申し上げます。</p>
-<div class="invoice-total-top"><span id="p-total-label">ご請求金額</span><span id="p-total-top"></span></div>
+<p class="invoice-greeting" id="p-greeting">明細は下記のとおりです。</p>
+<div class="invoice-total-top"><span id="p-total-label">金額（税込）</span><span id="p-total-top"></span></div>
 <div class="invoice-due" id="p-due-row">お支払い期限 : <span id="p-due"></span></div>
 <div class="invoice-table-area"><table class="invoice-items"><colgroup><col><col><col><col></colgroup><thead><tr><th>品番・品名</th><th>数量</th><th>単価</th><th>金額</th></tr></thead><tbody id="p-items"></tbody></table>
 <table class="invoice-sums"><tbody><tr><th>小計</th><td id="p-subtotal"></td></tr><tr><th>消費税 (<span id="p-rate"></span>%)</th><td id="p-tax"></td></tr><tr><th>合計</th><td id="p-total"></td></tr></tbody></table>
@@ -108,10 +108,10 @@ const fmt=n=>Number(n).toLocaleString('ja-JP',{maximumFractionDigits:2});
 const text=(id,value)=>{$(id).textContent=value;};
 const status=message=>text('status',message);
 function numberFor(date){return date.replaceAll('-','')+'-'+String(Date.now()).slice(-6);}
-function newInvoice(){const now=new Date();$('recipient').value='';$('honorific').value='御中';$('subject').value='';$('issueDate').value=localDate(now);$('dueDate').value=localDate(new Date(now.getFullYear(),now.getMonth()+1,0));$('number').value=numberFor($('issueDate').value);items=[{name:'',quantity:1,price:0}];renderEditors();render();}
+function newInvoice(){const now=new Date();$('recipient').value='';$('honorific').value='御中';$('subject').value='';$('issueDate').value=localDate(now);$('dueDate').value=$('documentType').value==='receipt'?'':localDate(new Date(now.getFullYear(),now.getMonth()+1,0));$('number').value=numberFor($('issueDate').value);items=[{name:'',quantity:1,price:0}];renderEditors();render();}
 function calculate(){const lines=items.map(item=>Math.round(Number(item.quantity||0)*Number(item.price||0)));const subtotal=lines.reduce((a,b)=>a+b,0);const tax=Math[$('taxRounding').value==='round'?'round':'floor'](subtotal*Number($('taxRate').value||0)/100);return {lines,subtotal,tax,total:subtotal+tax};}
 function renderEditors(){const container=$('items-editor');container.replaceChildren();items.forEach((item,index)=>{const div=document.createElement('div');div.className='item-editor';const head=document.createElement('div');head.className='item-head';const title=document.createElement('strong');title.textContent=`明細 ${index+1}`;const remove=document.createElement('button');remove.type='button';remove.className='remove';remove.textContent='削除';remove.setAttribute('aria-label',`明細${index+1}を削除`);remove.onclick=()=>{items.splice(index,1);renderEditors();render();};head.append(title,remove);const fields=document.createElement('div');fields.className='item-fields';[['name','品番・品名','text'],['quantity','数量','number'],['price','単価（税抜・割引はマイナス）','number']].forEach(([key,labelText,type])=>{const label=document.createElement('label');label.append(document.createTextNode(labelText));const input=document.createElement('input');input.type=type;input.value=item[key];if(type==='number'){input.step=key==='quantity'?'0.01':'1';if(key==='quantity')input.min='0';}else input.maxLength=500;input.addEventListener('input',()=>{items[index][key]=type==='number'?Number(input.value):input.value;render();});label.append(input);fields.append(label);});div.append(head,fields);container.append(div);});}
-function render(){const isReceipt=$('documentType').value==='receipt',sums=calculate(),type=isReceipt?'領収書':'請求書';text('p-date',jpDate($('issueDate').value));text('p-number',$('number').value);text('p-recipient',[$('recipient').value,$('honorific').value].filter(Boolean).join(' '));text('p-issuer',$('issuer').value);text('p-address',$('issuerAddress').value);text('p-phone',$('issuerPhone').value);text('p-subject',$('subject').value);text('p-due',jpDate($('dueDate').value));text('p-bank',$('bank').value);text('p-rate',$('taxRate').value);text('p-subtotal',fmt(sums.subtotal));text('p-tax',fmt(sums.tax));text('p-total',fmt(sums.total));text('p-total-top','¥ '+fmt(sums.total)+' -');text('p-title',type);text('p-number-label',isReceipt?'領収書番号':'請求番号');text('p-total-label',isReceipt?'領収金額':'ご請求金額');text('p-greeting',isReceipt?'下記のとおり領収いたしました。':'下記のとおりご請求申し上げます。');text('page-heading',isReceipt?'領収書作成':'請求書・領収書作成');text('editor-heading',isReceipt?'領収内容を入力':'請求内容を入力');text('preview-heading',type+' A4プレビュー');$('due-field').hidden=isReceipt;$('bank-field').hidden=isReceipt;$('p-due-row').hidden=isReceipt;$('p-bank-row').hidden=isReceipt;$('p-seal').hidden=!isReceipt;$('p-registration').hidden=!isReceipt;const tbody=$('p-items');tbody.replaceChildren();for(let index=0;index<Math.max(10,items.length);index++){const tr=document.createElement('tr');const item=items[index];const values=item?[item.name,fmt(item.quantity),fmt(item.price),fmt(sums.lines[index])]:['','','',''];values.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});tbody.append(tr);}}
+function render(){const isReceipt=$('documentType').value==='receipt',sums=calculate(),type=isReceipt?'領収書':'請求書';text('p-date',jpDate($('issueDate').value));text('p-number',$('number').value);text('p-recipient',[$('recipient').value,$('honorific').value].filter(Boolean).join(' '));text('p-issuer',$('issuer').value);text('p-address',$('issuerAddress').value);text('p-phone',$('issuerPhone').value);text('p-subject',$('subject').value);text('p-due',jpDate($('dueDate').value));text('p-bank',isReceipt?'':$('bank').value);text('p-rate',$('taxRate').value);text('p-subtotal',fmt(sums.subtotal));text('p-tax',fmt(sums.tax));text('p-total',fmt(sums.total));text('p-total-top','¥ '+fmt(sums.total)+' -');text('p-title',type);text('page-heading',isReceipt?'領収書作成':'請求書・領収書作成');text('editor-heading',isReceipt?'領収内容を入力':'請求内容を入力');text('preview-heading',type+' A4プレビュー');$('bank-field').hidden=isReceipt;$('p-due-row').hidden=!$('dueDate').value;$('p-bank-row').hidden=isReceipt;const tbody=$('p-items');tbody.replaceChildren();for(let index=0;index<Math.max(10,items.length);index++){const tr=document.createElement('tr');const item=items[index];const values=item?[item.name,fmt(item.quantity),fmt(item.price),fmt(sums.lines[index])]:['','','',''];values.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});tbody.append(tr);}}
 function valid(){if(!$('invoice-form').reportValidity())return false;if(!items.length||!items.some(item=>item.name.trim()&&Number(item.quantity)>0)){status('品番・品名と数量を1件以上入力してください。');return false;}if(items.some(item=>!item.name.trim()||!Number.isFinite(Number(item.quantity))||Number(item.quantity)<=0||!Number.isFinite(Number(item.price)))){status('すべての明細に品番・品名と0より大きい数量、単価を入力してください。');return false;}render();return true;}
 function snapshot(){return {version:1,fields:Object.fromEntries(fieldIds.map(id=>[id,$(id).value])),items:items.map(item=>({...item}))};}
 $('invoice-form').addEventListener('submit',event=>event.preventDefault());
@@ -328,7 +328,7 @@ $('estimate-pdf').addEventListener('change',async event=>{
 });
 $('apply-import').onclick=applyImportedEstimate;
 $('manual-invoice').onclick=()=>{ $('documentType').value='invoice';$('dueDate').required=true;render();showInvoiceWorkspace(); };
-$('manual-receipt').onclick=()=>{ $('documentType').value='receipt';$('dueDate').required=false;render();showInvoiceWorkspace(); };
+$('manual-receipt').onclick=()=>{ $('documentType').value='receipt';$('dueDate').value='';$('dueDate').required=false;render();showInvoiceWorkspace(); };
 
 loadIssuerSettings();
 newInvoice();
